@@ -1,0 +1,305 @@
+"""Clean the coursework notebooks into portfolio-style practice notebooks.
+
+The script intentionally keeps code cells intact except for repository-relative
+data paths. Markdown cells are cleaned of course administration, grading marks,
+and assignment wording.
+"""
+
+from __future__ import annotations
+
+import json
+import re
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[1]
+
+NOTEBOOKS = [
+    ROOT / "notebooks" / "01_housing_preprocessing.ipynb",
+    ROOT / "notebooks" / "02_time_series_random_forest_svm.ipynb",
+    ROOT / "notebooks" / "03_pca_clustering.ipynb",
+]
+
+HEADER_RE = re.compile(
+    r"CFRM 421/521|Gradescope|Late submissions|Due:|Homework\s+\d",
+    re.IGNORECASE,
+)
+GRADING_RE = re.compile(
+    r"\s*[\[(]\s*\d+(?:\.\d+)?\s*(?:marks?|points?)\s*[\])]",
+    re.IGNORECASE,
+)
+
+COMMON_REPLACEMENTS = [
+    (r"^###\s*1\(a\)\s*Comment\s*$", "### PCA SVM Result Notes"),
+    (r"^###\s*1\(b\)\s*Comment\s*$", "### PCA Random Forest Result Notes"),
+    (r"^###\s*1\.Regular PCA TO reduced to 2 dimensions\s*$", "### Regular PCA to Two Dimensions"),
+    (r"^###\s*2\.\s*LLE to reduce to 2 dimensions\s*$", "### LLE to Two Dimensions"),
+    (r"^###\s*3\.\s*PCA 95% \+ t-SNE to reduce to 2 dimensions\s*$", "### PCA 95% and t-SNE to Two Dimensions"),
+    (r"^###\s*2\(b\)\s*Comment\s*$", "### Dimensionality Reduction Comparison Notes"),
+    (r"^###\s*3\(a\)\s*Comment\s*$", "### Cluster Quality Notes"),
+    (r"^###\s*3\(b\)\s*Comment\s*$", "### Classifier Comparison Notes"),
+    (r"^###\s*3\(c\)\s*Comment\s*$", "### Cluster Feature Notes"),
+    (r"^###\s*4\(c\)\s*Comment\s*$", "### Regime Persistence Notes"),
+    (r"\*\*Solution\*\*:?", "**Implementation:**"),
+    (r"\*\*\[Add your solution here\]\*\*", "**Implementation:**"),
+    (r"\bthis homework\b", "this practice notebook"),
+    (r"\bthroughout this homework\b", "throughout this notebook"),
+    (r"\bIn this homework\b", "In this notebook"),
+    (r"\bQuestion 1\b", "the preprocessing section"),
+    (r"\bQuestions 1 and 2\b", "the preprocessing and model tuning sections"),
+    (r"\bQuestion 4\(a\)\b", "the base-classifier section"),
+    (r"\bQuestion 4\b", "the voting-classifier section"),
+    (r"\bQuestion 5\(b\)", "the blender training section"),
+    (r"\bQuestion 8\b", "the related textbook example"),
+    (r"\bQuestion 9\b", "the related textbook example"),
+    (r"\bQuestion 10 and 11\b", "the related Chapter 9 examples"),
+    (r"\bQuestion 10\b", "the related textbook example"),
+    (r"\bChapter 9, Question 11\b", "the related Chapter 9 extension"),
+    (r"\bIn this question\b", "In this section"),
+    (r"\bin this question\b", "in this section"),
+    (r"\bthis question\b", "this section"),
+    (r"\bthe question\b", "the section"),
+    (r"\bexercise\b", "practice example"),
+    (r"\bExercise\b", "Practice Example"),
+    (r"\bsubmit\b", "save"),
+    (r"\bsubmissions\b", "saved notebooks"),
+    (r"\bmarks\b", ""),
+    (r"\bpoints\b", ""),
+    (r"\byou should\b", "it is useful to"),
+    (r"\bYou should\b", "It is useful to"),
+    (r"\byour actual training set\b", "the working training set"),
+    (r"\byour transformed features\b", "the transformed features"),
+    (r"\byour final model\b", "the final model"),
+    (r"\byour best model\b", "the best model"),
+    (r"\byour \(fine-tuned\) model\b", "the fine-tuned model"),
+    (r"\byour trained model\b", "the trained model"),
+    (r"\byour model\b", "the model"),
+    (r"\byour training\b", "training"),
+    (r"\byour answer\b", "the result"),
+    (r"\byour stacking predictions\b", "the stacking predictions"),
+    (r"\byour k-means clusterer\b", "the fitted k-means clusterer"),
+    (r"\byour hyperparameters\b", "hyperparameters"),
+    (r"\byour estimators\b", "the estimators"),
+    (r"\byour results\b", "these results"),
+    (r"\byour regime switching model\b", "the regime-switching workflow"),
+    (r"\byour choice\b", "the selected value"),
+    (r"\byour comparison\b", "the comparison"),
+    (r"\byou found\b", "identified"),
+    (r"\byou may use\b", "the notebook can use"),
+]
+
+CELL_HEADING_REPLACEMENTS = {
+    "01_housing_preprocessing.ipynb": [
+        (1, r"^#\s*1\.\s*Preprocessing housing data\b.*$", "# Housing Data Preprocessing"),
+        (7, r"^##\s*\(a\)\s*Handling missing values\b.*$", "## Handling Missing Values"),
+        (14, r"^##\s*\(b\)\s*Handling categorical features\b.*$", "## Encoding Categorical Features"),
+        (19, r"^##\s*\(c\)\s*Feature engineering\b.*$", "## Feature Engineering"),
+        (22, r"^##\s*\(d\)\s*Feature scaling and transformation\b.*$", "## Feature Scaling and Transformation"),
+        (26, r"^##\s*\(e\)\s*Transformation pipelines\b.*$", "## Transformation Pipelines"),
+        (29, r"^#\s*2\.\s*Fine-tuning models\b.*$", "# Model Fine-Tuning"),
+        (30, r"^##\s*\(a\)\s*Linear regression\b.*$", "## Linear Regression Baseline"),
+        (33, r"^##\s*\(b\)\s*RMSE and MAE\b.*$", "## RMSE and MAE Evaluation"),
+        (36, r"^##\s*\(c\)\s*Cross validation\b.*$", "## Cross-Validation"),
+        (39, r"^##\s*\(d\)\s*Alternatives to linear regression\b.*$", "## Decision Tree and Random Forest Alternatives"),
+        (49, r"^##\s*\(e\)\s*Choosing optimal values of hyperparameters using cross validation\b.*$", "## Hyperparameter Tuning with Cross-Validation"),
+        (52, r"^##\s*\(f\)\s*Evaluating .* test set\b.*$", "## Final Test Set Evaluation"),
+        (55, r"^#\s*3\.\s*Regularizing linear regression\b.*$", "# Regularized Linear Regression"),
+        (56, r"^##\s*\(a\)\s*Polynomial regression and regularizing\b.*$", "## Polynomial Regression and Regularization"),
+        (59, r"^##\s*\(b\)\s*Learning curves\b.*$", "## Learning Curves"),
+    ],
+    "02_time_series_random_forest_svm.ipynb": [
+        (1, r"^#\s*1\.\s*Random forest for time series data\b.*$", "# Random Forest Forecasting for Time Series Data"),
+        (3, r"^##\s*\(a\)\s*$", "## Feature Matrix and Target Construction"),
+        (6, r"^##\s*\(b\)\s*$", "## Random Forest Forecasting with TimeSeriesSplit"),
+        (9, r"^##\s*\(c\)\s*$", "## Test Set Forecast Evaluation"),
+        (12, r"^##\s*\(d\)\s*$", "## Baseline Forecast Comparison"),
+        (15, r"^##\s*\(e\)\s*$", "## Feature Importance Analysis"),
+        (19, r"^#\s*2\.\s*Time Series Signature\b.*$", "# Time Series Signatures"),
+        (25, r"^##\s*\(a\)\s*$", "## Level-2 Signature Features"),
+        (28, r"^##\s*\(b\)\s*$", "## Signed Area and Lead-Lag Interpretation"),
+        (31, r"^##\s*\(c\)\s*$", "## Signature Dimension at Higher Levels"),
+        (34, r"^#\s*3\.\s*SVM classification\b.*$", "# SVM Classification"),
+        (34, r"^##\s*\(a\)\s*$", "## Linear SVM Hyperparameter Search"),
+        (40, r"^##\s*\(b\)\s*$", "## RBF Kernel SVM Hyperparameter Search"),
+        (43, r"^##\s*\(c\)\s*$", "## Best SVM Test Accuracy"),
+        (47, r"^#\s*4\.\s*Voting classifiers\b.*$", "# Voting Classifiers"),
+        (47, r"^##\s*\(a\)\s*$", "## Base Classifiers for MNIST"),
+        (52, r"^##\s*\(b\)\s*$", "## Hard and Soft Voting Ensembles"),
+        (55, r"^##\s*\(c\)\s*$", "## Best Ensemble Test Accuracy"),
+        (58, r"^#\s*5\.\s*Stacking\b.*$", "# Stacking Ensemble"),
+        (58, r"^##\s*\(a\)\s*$", "## Stacking Feature Construction"),
+        (61, r"^##\s*\(b\)\s*$", "## Blender Model Training"),
+        (64, r"^##\s*\(c\)\s*$", "## Blender Test Set Evaluation"),
+    ],
+    "03_pca_clustering.ipynb": [
+        (1, r"^#\s*1\.\s*Applying PCA\b.*$", "# Applying PCA"),
+        (1, r"^##\s*\(a\)\s*$", "## PCA with an RBF SVM Classifier"),
+        (9, r"^##\s*\(b\)\s*$", "## PCA with a Random Forest Classifier"),
+        (14, r"^#\s*2\.\s*Visualizing dimensionality reduction\b.*$", "# Visualizing Dimensionality Reduction"),
+        (14, r"^##\s*\(a\)\s*$", "## t-SNE Visualization of MNIST"),
+        (18, r"^##\s*\(b\)\s*$", "## Comparing PCA, LLE, and PCA + t-SNE"),
+        (31, r"^#\s*3\.\s*k-Means clustering\b.*$", "# k-Means Clustering"),
+        (31, r"^##\s*\(a\).*?$", "## Face Clustering with PCA and k-Means"),
+        (44, r"^##\s*\(b\)\s*$", "## Classification on PCA Features"),
+        (49, r"^##\s*\(c\).*?$", "## k-Means Features for Classification"),
+        (54, r"^#\s*4\.\s*Finding regimes in time series\b.*$", "# Finding Regimes in Time Series"),
+        (54, r"^##\s*\(a\)\s*$", "## Clustering Inflation and Unemployment Regimes"),
+        (68, r"^##\s*\(b\)\s*$", "## Regime Centroids and Training/Test Assignments"),
+        (72, r"^##\s*\(c\)\s*$", "## Markov Transition Matrices for Regimes"),
+    ],
+}
+
+
+def source_text(cell: dict) -> str:
+    source = cell.get("source", "")
+    if isinstance(source, list):
+        return "".join(source)
+    return source
+
+
+def set_source(cell: dict, text: str) -> None:
+    cell["source"] = text.splitlines(keepends=True)
+
+
+def update_data_paths(text: str) -> str:
+    text = text.replace('"NYSE.csv"', '"../data/NYSE.csv"')
+    text = text.replace("'NYSE.csv'", "'../data/NYSE.csv'")
+    text = text.replace("NYSE.csv", "../data/NYSE.csv")
+    text = text.replace("../data/../data/NYSE.csv", "../data/NYSE.csv")
+    return text
+
+
+def rewrite_markdown(text: str, notebook_name: str, cell_index: int) -> str:
+    text = GRADING_RE.sub("", text)
+
+    for index, pattern, replacement in CELL_HEADING_REPLACEMENTS.get(notebook_name, []):
+        if index == cell_index:
+            text = re.sub(pattern, replacement, text, flags=re.IGNORECASE | re.MULTILINE)
+
+    for pattern, replacement in COMMON_REPLACEMENTS:
+        text = re.sub(pattern, replacement, text, flags=re.MULTILINE)
+
+    text = text.replace("**Task:** Read", "This section follows")
+    text = text.replace("**Task:** Use", "This section uses")
+    text = text.replace("**Task:** Find", "This section evaluates")
+    text = text.replace("**Task:** Using", "This section uses")
+    text = text.replace("**Task:**", "**Practice focus:**")
+    text = text.replace("Download the data as a csv file from Canvas files. ", "")
+    text = text.replace(
+        "If the data is stored in a file named `NYSE.csv` in the working directory, then loading the data can be done using the code below.",
+        "The included dataset is loaded from `../data/NYSE.csv`.",
+    )
+    text = text.replace("If the data is stored in a file named `NYSE.csv` in your working directory, then loading the data can be done using the code below.", "The included dataset is loaded from `../data/NYSE.csv`.")
+    text = text.replace("Let us", "We")
+    text = text.replace("let us", "we")
+    text = text.replace("To fine-tune a model, we should find good values of the hyperparameters based on out-of-sample performance.", "The model tuning workflow searches for hyperparameter values based on out-of-sample performance.")
+    text = text.replace("Hence, comment", "The resulting curves are used to comment")
+    text = text.replace("Return fitted values", "The fitted values are returned")
+    text = text.replace("Return the 10 RMSE scores", "The 10 RMSE scores are returned")
+    text = text.replace("Print at least", "The notebook prints")
+    text = text.replace("Do not shuffle the data.", "The data order is preserved.")
+    text = text.replace("Do not shuffle the data and do not use a standard scaler.", "The data order is preserved, and no standard scaler is used.")
+    text = text.replace("Do not use", "Avoid using")
+    text = text.replace("Do not retrain the blender.", "The blender is not retrained.")
+    text = text.replace("Train a SVM classifier", "This section trains a SVM classifier")
+    text = text.replace("Load the MNIST dataset", "This section loads the MNIST dataset")
+    text = text.replace("Try using other dimensionality reduction methods.", "This comparison uses other dimensionality reduction methods.")
+    text = text.replace("Split the data into a training set", "The data is split into a training set")
+    text = text.replace("Use k-means", "K-means is used")
+    text = text.replace("How many regimes do you choose? Explain the result.", "The notebook compares these diagnostics to choose the number of regimes.")
+    text = text.replace("How many regimes do you choose? Explain your answer.", "The notebook compares these diagnostics to choose the number of regimes.")
+    text = text.replace("Calculate the transition probabilities using the test set.", "The transition probabilities are calculated using the test set.")
+    text = text.replace("Then, repeat the estimation of the transition probabilities on the test set.", "The estimation of transition probabilities is then repeated on the test set.")
+    text = text.replace("Be careful not to", "It is important not to")
+    text = text.replace("Which feature is the most important and what is its feature importance value?", "The feature importances are used to identify the most influential predictor.")
+    text = text.replace("Use the processed features `X` that you obtained in 1(e) as predictors", "The processed features `X` from the transformation pipeline section are used as predictors")
+    text = text.replace("linear regression that you fit", "fitted linear regression")
+    text = text.replace("as you did in part (c)", "as in the cross-validation section")
+    text = text.replace("model that you fitted in 2(a)", "linear regression baseline model")
+    text = text.replace("In this section you will work with the NYSE dataset.", "This section works with the NYSE dataset.")
+    text = text.replace("(you can use `n_job=-1` throughout this notebook wherever it is avaliable)", "where available, `n_jobs=-1` can be used")
+    text = text.replace("You can also visualize the first 150 steps of the raw comovements in each case.", "The first 150 steps of the raw comovements in each case can also be visualized.")
+    text = text.replace("You may notice path A and path B evolve in different directions.", "Path A and path B evolve in different directions.")
+    text = text.replace("You may need to install the `iisignature` package if it is not already available (e.g., using `!pip install iisignature` in a code cell).", "The `iisignature` package may need to be installed if it is not already available.")
+    text = text.replace("You are allowed to use `n_jobs=-1`.", "`n_jobs=-1` can be used.")
+    text = text.replace("This section loads the MNIST dataset and take only the first 5,000 observations", "This section loads the MNIST dataset and takes only the first 5,000 observations")
+    text = text.replace("Use the nonlinear dimensionality reduction technique **t-SNE** to reduce this subset", "The nonlinear dimensionality reduction technique **t-SNE** reduces this subset")
+    text = text.replace("Next, use PCA on the features", "Next, PCA is applied to the features")
+    text = text.replace("Continuing on from (b), regardless of which model is better, use the random forest classifier.", "Continuing on from the classifier comparison, the random forest classifier is used.")
+    text = text.replace("Next, use k-Means as a dimensionality reduction tool, and train a classifier.", "Next, k-Means is used as a dimensionality reduction tool before training a classifier.")
+    text = text.replace("Obtain the daily values of the CPI and unemployment rate from FRED", "This section obtains the daily values of the CPI and unemployment rate from FRED")
+    text = text.replace("Only 3 time series in this dataset will be use:", "Three time series in this dataset are used:")
+    text = text.replace("In such scenarios, one should transform the features so that they have a similar range of values.", "In such scenarios, the features are transformed so that they have a similar range of values.")
+    text = text.replace("Since the RBF SVM in part (b) achieved a higher cross-validation accuracy (0.8904999452225839) than the linear SVM in part (a) (0.8329911620766194), I selected the RBF SVM as the best model and evaluated it on the test set.", "Since the RBF SVM achieved a higher cross-validation accuracy (0.8904999452225839) than the linear SVM (0.8329911620766194), the RBF SVM is selected as the best model and evaluated on the test set.")
+    text = text.replace("Train the following classifiers on the training set:", "The following classifiers are trained on the training set:")
+    text = text.replace("Then cluster the images based on the reduced features using k-Means", "The reduced features are then clustered with k-Means")
+    text = text.replace("Visualize the clusters by plotting the images in each cluster and comment on whether similar faces appear in each cluster.", "The clusters are visualized by plotting the images in each cluster and noting whether similar faces appear together.")
+    text = text.replace("**Note:** Since my Python version is relatively new, I encountered a compatibility issue when importing `pandas_datareader`. Therefore, instead of using `pandas_datareader` to download the FRED data, I used `pandas.read_csv()` with the FRED CSV links to retrieve the data directly. This method avoids", "**Note:** A compatibility issue can occur when importing `pandas_datareader` with newer Python versions. This notebook uses `pandas.read_csv()` with FRED CSV links to retrieve the data directly. This method avoids")
+    text = text.replace("ignore the time aspect of training set", "ignore the time aspect of the training set")
+    text = text.replace("training set into a number of clusters", "the training set into a number of clusters")
+    text = text.replace("I choose **2 regimes**.", "The selected setting uses **2 regimes**.")
+    text = text.replace("and you can read the documentation for the dataset", "with documentation for the dataset available")
+    text = text.replace("You want to predict the 1-step ahead value of `log_volume`", "The forecasting target is the 1-step ahead value of `log_volume`")
+    text = text.replace("(you can use `n_job=-1` throughout this practice notebook wherever it is avaliable)", "where available, `n_jobs=-1` can be used")
+    text = text.replace("you train a model (called a **blender**) to aggregate the result of each predictor", "a model (called a **blender**) is trained to aggregate the result of each predictor")
+    text = text.replace("if you draw the image for every observation", "if the image is drawn for every observation")
+    text = text.replace("whether you see similar faces in each cluster", "whether similar faces appear in each cluster")
+    text = text.replace("What performance can you reach on the validation set? What if you append the features from the reduced set to the original features and again search for the best number of clusters?", "The validation performance is recorded, then the k-Means features are appended to the original features and the search for the best number of clusters is repeated.")
+    text = text.replace("This section obtains the daily values of the CPI and unemployment rate from FRED up to 2023-01-01 and then convert the CPI into the yearly inflation rate `inf_data` using the following code. Note that you may have to install the package `pandas_datareader`. Alternatively, you can download the data as a csv file from [Canvas](https://canvas.uw.edu/files/105781273/download?download_frd=1).", "This section obtains the daily values of the CPI and unemployment rate from FRED up to 2023-01-01 and then converts the CPI into the yearly inflation rate `inf_data`. The code below reads public FRED CSV endpoints directly and does not require local credentials.")
+    text = text.replace("Based on all of these results, what are the best hyperparameter values?", "Based on these results, the best hyperparameter values are identified.")
+    text = text.replace("This section uses the test set, find the RMSE of the best model in part (e).", "This section uses the test set to find the RMSE of the best model from the hyperparameter tuning section.")
+    text = text.replace("the voting-classifier section(a)", "the base-classifier section")
+    text = text.replace("the voting-classifier section(c)", "the best ensemble evaluation section")
+    text = text.replace("Specifically, try:", "The comparison includes:")
+    text = text.replace("For each algorithm, include the argument `random_state=42`. Then for each of the three methods above, report how long it took to reduce the dimension. Also, provide a 2D plot of the results. Which method runs faster? Which one results in a better visualization? Include t-SNE from (a) as part of the comparison.", "For each algorithm, the notebook includes the argument `random_state=42`, reports the dimensionality-reduction runtime, and provides a 2D plot of the results. The comparison also includes the t-SNE result from the previous section.")
+    text = text.replace("Using the time series of regimes in the training set that identified in (b), estimate these transition probabilities, as follows:", "The time series of regimes from the training set is used to estimate these transition probabilities:")
+    text = text.replace("Next, we check how good the regime-switching workflow is.", "Next, the fitted regime-switching workflow is checked on the test set.")
+    text = text.replace("Do not retrain the fitted k-means clusterer, simply use it to predict the regimes of the test set.", "The fitted k-means clusterer is reused to predict regimes in the test set.")
+    text = re.sub(r"\n{3,}", "\n\n", text).strip()
+    if text:
+        text += "\n"
+    return text
+
+
+def clean_notebook(path: Path) -> int:
+    notebook = json.loads(path.read_text(encoding="utf-8"))
+    cleaned_cells = []
+
+    for cell_index, cell in enumerate(notebook.get("cells", [])):
+        text = source_text(cell)
+
+        if cell.get("cell_type") == "markdown":
+            if HEADER_RE.search(text):
+                continue
+            if path.name == "03_pca_clustering.ipynb" and "Optional exercise: Neural Networks" in text:
+                break
+            text = rewrite_markdown(text, path.name, cell_index)
+            if text:
+                set_source(cell, text)
+                cleaned_cells.append(cell)
+            continue
+
+        if cell.get("cell_type") == "code":
+            updated = update_data_paths(text)
+            if updated != text:
+                set_source(cell, updated)
+            cleaned_cells.append(cell)
+            continue
+
+        cleaned_cells.append(cell)
+
+    notebook["cells"] = cleaned_cells
+    path.write_text(json.dumps(notebook, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
+    return len(cleaned_cells)
+
+
+def main() -> None:
+    for path in NOTEBOOKS:
+        if not path.exists():
+            raise FileNotFoundError(path)
+        count = clean_notebook(path)
+        print(f"Cleaned {path.relative_to(ROOT)} ({count} cells)")
+
+
+if __name__ == "__main__":
+    main()
