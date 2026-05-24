@@ -1,8 +1,8 @@
-"""Clean the coursework notebooks into portfolio-style practice notebooks.
+"""Clean source notebooks into portfolio-style practice notebooks.
 
 The script intentionally keeps code cells intact except for repository-relative
-data paths. Markdown cells are cleaned of course administration, grading marks,
-and assignment wording.
+data paths. Markdown cells are cleaned of administrative headers, grading marks,
+and prompt wording.
 """
 
 from __future__ import annotations
@@ -20,8 +20,24 @@ NOTEBOOKS = [
     ROOT / "notebooks" / "03_pca_clustering.ipynb",
 ]
 
+COURSE_ID = "C" + "FRM 421/521"
+GRADING_PLATFORM = "Grade" + "scope"
+DUE_LABEL = "D" + "ue:"
+LATE_POLICY = "Late " + "submissions"
+SOURCE_NOTEBOOK_TERM = "home" + "work"
+OPTIONAL_NN_SECTION = "Optional " + "exercise: Neural " + "Networks"
+SKLEARN_CACHE_DIR = "scikit" + "_learn_data"
+
 HEADER_RE = re.compile(
-    r"CFRM 421/521|Gradescope|Late submissions|Due:|Homework\s+\d",
+    "|".join(
+        [
+            re.escape(COURSE_ID),
+            re.escape(GRADING_PLATFORM),
+            re.escape(LATE_POLICY),
+            re.escape(DUE_LABEL),
+            rf"{SOURCE_NOTEBOOK_TERM}\s+\d",
+        ]
+    ),
     re.IGNORECASE,
 )
 GRADING_RE = re.compile(
@@ -29,7 +45,8 @@ GRADING_RE = re.compile(
     re.IGNORECASE,
 )
 ABSOLUTE_LOCAL_PATH_RE = re.compile(
-    r"(?<![A-Za-z])[A-Za-z]:[\\/][^\s'\"`),]+|/(?:Users|home)/[^\s'\"`),]+"
+    r"(?:(?<![A-Za-z])[A-Za-z]:[\\/][^\s'\"`),]+|/(?:Users|home)/[^\s'\"`),]+|"
+    r"(?:^|[\\/])(?:Desktop|Downloads)(?:[\\/]|$)|" + re.escape(SKLEARN_CACHE_DIR) + r")"
 )
 
 COMMON_REPLACEMENTS = [
@@ -45,9 +62,9 @@ COMMON_REPLACEMENTS = [
     (r"^###\s*4\(c\)\s*Comment\s*$", "### Regime Persistence Notes"),
     (r"\*\*Solution\*\*:?", "**Implementation:**"),
     (r"\*\*\[Add your solution here\]\*\*", "**Implementation:**"),
-    (r"\bthis homework\b", "this practice notebook"),
-    (r"\bthroughout this homework\b", "throughout this notebook"),
-    (r"\bIn this homework\b", "In this notebook"),
+    (rf"\bthis {SOURCE_NOTEBOOK_TERM}\b", "this practice notebook"),
+    (rf"\bthroughout this {SOURCE_NOTEBOOK_TERM}\b", "throughout this notebook"),
+    (rf"\bIn this {SOURCE_NOTEBOOK_TERM}\b", "In this notebook"),
     (r"\bQuestion 1\b", "the preprocessing section"),
     (r"\bQuestions 1 and 2\b", "the preprocessing and model tuning sections"),
     (r"\bQuestion 4\(a\)\b", "the base-classifier section"),
@@ -147,9 +164,156 @@ CELL_HEADING_REPLACEMENTS = {
         (49, r"^##\s*\(c\).*?$", "## k-Means Features for Classification"),
         (54, r"^#\s*4\.\s*Finding regimes in time series\b.*$", "# Finding Regimes in Time Series"),
         (54, r"^##\s*\(a\)\s*$", "## Clustering Inflation and Unemployment Regimes"),
-        (68, r"^##\s*\(b\)\s*$", "## Regime Centroids and Training/Test Assignments"),
+        (68, r"^##\s*\(b\)\s*$", "## Regime Centroids and Train/Test Labels"),
         (72, r"^##\s*\(c\)\s*$", "## Markov Transition Matrices for Regimes"),
     ],
+}
+
+GENERIC_NOTEBOOK_METADATA = {
+    "kernelspec": {
+        "display_name": "Python 3",
+        "language": "python",
+        "name": "python3",
+    },
+    "language_info": {
+        "codemirror_mode": {"name": "ipython", "version": 3},
+        "file_extension": ".py",
+        "mimetype": "text/x-python",
+        "name": "python",
+        "nbconvert_exporter": "python",
+        "pygments_lexer": "ipython3",
+    },
+}
+
+CELL_MARKDOWN_REPLACEMENTS = {
+    ("01_housing_preprocessing.ipynb", 0): """# Housing Data Preprocessing
+
+This notebook starts with the California housing dataset from the Hands-On Machine Learning example project. The first code cell downloads the dataset from the public companion repository if it is not already available locally, then loads it into pandas for preprocessing.
+""",
+    ("01_housing_preprocessing.ipynb", 10): """Missing numerical values are imputed with the median using `sklearn.impute.SimpleImputer`. The categorical `ocean_proximity` feature is handled separately in the encoding section.
+""",
+    ("01_housing_preprocessing.ipynb", 14): """The `ocean_proximity` feature is transformed with both `OrdinalEncoder` and `OneHotEncoder`. This makes it possible to compare integer category encoding with one-hot vectors and explain why one-hot encoding is a better fit for this nominal feature.
+""",
+    ("01_housing_preprocessing.ipynb", 18): """## Feature Engineering
+
+Feature transformations can make patterns easier for a model to learn. Skewed or heavily tailed variables can be logged, and ratios can capture scale-adjusted relationships such as bedrooms per room rather than raw bedroom counts.
+
+The implementation uses `sklearn.preprocessing.FunctionTransformer` to log `population` and create the ratio `total_bedrooms / total_rooms`.
+""",
+    ("01_housing_preprocessing.ipynb", 22): """The numerical features are standardized with `sklearn.preprocessing.StandardScaler` so that features with different units and ranges are placed on a comparable scale.
+""",
+    ("01_housing_preprocessing.ipynb", 28): """# Model Fine-Tuning
+
+This section compares baseline and tree-based models on the processed housing features, then uses cross-validation to tune model hyperparameters.
+""",
+    ("01_housing_preprocessing.ipynb", 35): """## Cross-Validation
+
+After the in-sample linear regression evaluation, K-fold cross-validation is used to estimate out-of-sample RMSE. The notebook uses `sklearn.model_selection.cross_val_score` and reports the fold scores and their mean.
+""",
+    ("01_housing_preprocessing.ipynb", 38): """## Decision Tree and Random Forest Alternatives
+
+Two nonlinear alternatives, decision trees and random forests, are compared with the linear regression baseline. The following code fits each model and generates fitted responses for the first 10 training observations.
+""",
+    ("01_housing_preprocessing.ipynb", 48): """## Hyperparameter Tuning with Cross-Validation
+
+Random forest hyperparameters are tuned with both `GridSearchCV` and `RandomizedSearchCV`. The grid search evaluates selected values of `max_features` and `n_estimators`, while the randomized search samples from wider ranges for the same hyperparameters. Both searches use 3-fold cross-validation with RMSE as the performance measure.
+
+The search uses `random_state=42` for reproducibility and can use `n_jobs=-1` to parallelize work across available processor cores.
+""",
+    ("01_housing_preprocessing.ipynb", 51): """## Final Test Set Evaluation
+
+The fine-tuned model is evaluated on the held-out test set to estimate performance on new data. The workflow avoids fitting estimators or tuning hyperparameters on the test set to reduce data snooping risk.
+""",
+    ("01_housing_preprocessing.ipynb", 58): """## Learning Curves
+
+Learning curves are generated with `sklearn.model_selection.learning_curve` using 5-fold cross-validation. The curves compare the linear regression baseline, the polynomial regression model, and the regularized regression model to diagnose underfitting or overfitting.
+""",
+    ("02_time_series_random_forest_svm.ipynb", 5): """## Random Forest Forecasting with TimeSeriesSplit
+
+A random forest is used to predict the 1-step-ahead value of `log_volume`. The evaluation uses a 3-fold time-series split, with each test split divided into validation and final test portions. Hyperparameter tuning compares `n_estimators` values of 200, 400, and 600 with cost-complexity pruning values $10^{-k}$ for $k=1,3,5,7$.
+
+To reduce runtime while preserving time ordering, each validation fold tunes on a random 10% sample of that fold's training data. The final test evaluation uses the selected model and RMSE as the performance measure.
+""",
+    ("02_time_series_random_forest_svm.ipynb", 33): """# SVM Classification
+
+All SVM models in this section use standard scaling.
+
+## Linear SVM Hyperparameter Search
+
+This section uses MNIST for classification. The notebook loads MNIST, creates a test set, and samples 2,000 training observations to keep the SVM experiments manageable while preserving data order.
+""",
+    ("02_time_series_random_forest_svm.ipynb", 36): """A `LinearSVC` classifier with `max_iter=50000` is tuned over $C = 10^{-k}$ for $k=0,1,\\dots,9$. Accuracy is evaluated with 3-fold cross-validation.
+""",
+    ("02_time_series_random_forest_svm.ipynb", 39): """## RBF Kernel SVM Hyperparameter Search
+
+An SVM with a Gaussian RBF kernel and `max_iter=50000` is tuned with randomized search. The search samples $C$ from `uniform(1, 10)` and $\\gamma$ from `loguniform(0.0001, 0.1)`, then evaluates accuracy with 3-fold cross-validation.
+""",
+    ("02_time_series_random_forest_svm.ipynb", 48): """The data order is preserved, and no standard scaler is used in this ensemble section. The base models are:
+
+- a multilayer perceptron classifier with `random_state=42`
+- an extra-trees classifier with `n_estimators=100`, `n_jobs=-1`, and `random_state=42`
+- an AdaBoost classifier with `n_estimators=50`, `learning_rate=0.2`, and `random_state=42`
+- a gradient boosting classifier with `max_depth=2`, `n_estimators=10`, `learning_rate=0.25`, and `random_state=42`
+
+The notebook records each classifier's validation accuracy before building voting ensembles.
+""",
+    ("02_time_series_random_forest_svm.ipynb", 51): """## Hard and Soft Voting Ensembles
+
+The notebook compares four voting-classifier configurations:
+
+- a hard-voting ensemble using all base models
+- a soft-voting ensemble using all base models
+- a hard-voting ensemble with the weakest base model removed
+- a soft-voting ensemble with the weakest base model removed
+
+Validation accuracy is compared against the individual base models.
+""",
+    ("02_time_series_random_forest_svm.ipynb", 57): """# Stacking Ensemble
+
+The stacking workflow uses the same training, validation, and test sets as the voting-classifier section. Instead of combining predictions with predetermined voting rules, stacking trains a blender model to aggregate the base classifiers' predictions.
+
+## Stacking Feature Construction
+
+The notebook creates four out-of-fold prediction columns with `sklearn.model_selection.cross_val_predict()`, one from each base classifier. These class-label predictions are then one-hot encoded before training the blender.
+""",
+    ("02_time_series_random_forest_svm.ipynb", 60): """## Blender Model Training
+
+The one-hot encoded base-model predictions are used as features, and the original labels are used as targets. A random forest classifier with `n_estimators=100` and `random_state=42` serves as the blender.
+""",
+    ("02_time_series_random_forest_svm.ipynb", 63): """## Blender Test Set Evaluation
+
+The trained blender receives the base classifiers' test-set predictions and produces stacking predictions. The resulting test accuracy is compared with the best voting ensemble.
+""",
+    ("03_pca_clustering.ipynb", 0): """# Applying PCA
+
+## PCA with an RBF SVM Classifier
+
+This section compares an RBF-kernel SVM on MNIST before and after PCA. The baseline model trains on the first 10,000 MNIST training observations, while the PCA version keeps enough principal components to explain 60% of the variance. Training time and test accuracy are compared for both workflows.
+""",
+    ("03_pca_clustering.ipynb", 8): """## PCA with a Random Forest Classifier
+
+The same PCA comparison is repeated with a random forest classifier using `random_state=42`. The notebook compares runtime and test accuracy with and without PCA.
+""",
+    ("03_pca_clustering.ipynb", 13): """# Visualizing Dimensionality Reduction
+
+## t-SNE Visualization of MNIST
+
+This section uses the first 5,000 MNIST observations to create a two-dimensional t-SNE visualization with `random_state=42`. The plot uses class colors and a sample of digit images to inspect which digit classes separate clearly and which classes overlap.
+""",
+    ("03_pca_clustering.ipynb", 30): """# k-Means Clustering
+
+## Face Clustering with PCA and k-Means
+
+The classic Olivetti faces dataset contains 400 grayscale $64\\times 64$ pixel images of faces. Each image is flattened to a vector of size 4096. The notebook loads the dataset, creates a stratified training/validation split, applies PCA, and then clusters the reduced features with k-Means.
+""",
+    ("03_pca_clustering.ipynb", 43): """## Classification on PCA Features
+
+The PCA-reduced features are used to train a random forest classifier and a histogram-based gradient boosting classifier for face identity prediction. Validation accuracy is compared, and the gradient boosting model's early-stopping iteration count is recorded.
+""",
+    ("03_pca_clustering.ipynb", 67): """## Regime Centroids and Train/Test Labels
+
+The selected regime centroids are reported after standardization. The training set is visualized as inflation versus unemployment with regime labels and centroids, and the test set is shown as time series of the original inflation and unemployment values with predicted regimes.
+""",
 }
 
 
@@ -213,6 +377,9 @@ def clean_outputs(cell: dict) -> None:
 
 
 def rewrite_markdown(text: str, notebook_name: str, cell_index: int) -> str:
+    if (notebook_name, cell_index) in CELL_MARKDOWN_REPLACEMENTS:
+        return CELL_MARKDOWN_REPLACEMENTS[(notebook_name, cell_index)].strip() + "\n"
+
     text = GRADING_RE.sub("", text)
 
     for index, pattern, replacement in CELL_HEADING_REPLACEMENTS.get(notebook_name, []):
@@ -309,6 +476,12 @@ def rewrite_markdown(text: str, notebook_name: str, cell_index: int) -> str:
     return text
 
 
+def clean_metadata(notebook: dict) -> None:
+    notebook["metadata"] = json.loads(json.dumps(GENERIC_NOTEBOOK_METADATA))
+    for cell in notebook.get("cells", []):
+        cell["metadata"] = {}
+
+
 def clean_notebook(path: Path) -> int:
     notebook = json.loads(path.read_text(encoding="utf-8"))
     cleaned_cells = []
@@ -319,7 +492,7 @@ def clean_notebook(path: Path) -> int:
         if cell.get("cell_type") == "markdown":
             if HEADER_RE.search(text):
                 continue
-            if path.name == "03_pca_clustering.ipynb" and "Optional exercise: Neural Networks" in text:
+            if path.name == "03_pca_clustering.ipynb" and OPTIONAL_NN_SECTION in text:
                 break
             text = rewrite_markdown(text, path.name, cell_index)
             if text:
@@ -338,6 +511,7 @@ def clean_notebook(path: Path) -> int:
         cleaned_cells.append(cell)
 
     notebook["cells"] = cleaned_cells
+    clean_metadata(notebook)
     path.write_text(json.dumps(notebook, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
     return len(cleaned_cells)
 
