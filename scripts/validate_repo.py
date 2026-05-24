@@ -32,6 +32,11 @@ ABSOLUTE_LOCAL_PATH_RE = re.compile(
     r"(?:(?<![A-Za-z])[A-Za-z]:[\\/][^\s'\"`),]+|/(?:Users|home)/[^\s'\"`),]+)"
 )
 BAD_NYSE_RE = re.compile(r"(?<!\.\./data/)NYSE\.csv")
+EMAIL_RE = re.compile(r"[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}", re.IGNORECASE)
+SECRET_RE = re.compile(
+    r"(?:api[_-]?key|password|secret|token)\s*[:=]\s*['\"][^'\"]+['\"]",
+    re.IGNORECASE,
+)
 
 
 def source_text(cell: dict) -> str:
@@ -39,6 +44,20 @@ def source_text(cell: dict) -> str:
     if isinstance(source, list):
         return "".join(source)
     return source
+
+
+def iter_text_fields(value: object, location: str = ""):
+    if isinstance(value, str):
+        yield location, value
+    elif isinstance(value, list):
+        for index, item in enumerate(value):
+            yield from iter_text_fields(item, f"{location}[{index}]")
+    elif isinstance(value, dict):
+        for key, item in value.items():
+            if key in {"image/png", "image/jpeg", "application/pdf"}:
+                continue
+            child_location = f"{location}.{key}" if location else str(key)
+            yield from iter_text_fields(item, child_location)
 
 
 def validate_notebook(path: Path) -> list[str]:
@@ -56,15 +75,22 @@ def validate_notebook(path: Path) -> list[str]:
             if GRADING_RE.search(text):
                 errors.append(f"{location}: markdown contains a grading mark")
 
-        if "Optional exercise: Neural Networks" in text:
-            errors.append(f"{location}: contains optional neural network section")
+        for field_location, field_text in iter_text_fields(cell, location):
+            if "Optional exercise: Neural Networks" in field_text:
+                errors.append(f"{field_location}: contains optional neural network section")
 
-        if ABSOLUTE_LOCAL_PATH_RE.search(text):
-            errors.append(f"{location}: contains an absolute local path")
+            if ABSOLUTE_LOCAL_PATH_RE.search(field_text):
+                errors.append(f"{field_location}: contains an absolute local path")
 
-        for match in BAD_NYSE_RE.finditer(text):
-            context = text[max(0, match.start() - 20) : match.end() + 20]
-            errors.append(f"{location}: NYSE.csv reference is not ../data/NYSE.csv ({context!r})")
+            if EMAIL_RE.search(field_text):
+                errors.append(f"{field_location}: contains an email address")
+
+            if SECRET_RE.search(field_text):
+                errors.append(f"{field_location}: contains a possible credential")
+
+            for match in BAD_NYSE_RE.finditer(field_text):
+                context = field_text[max(0, match.start() - 20) : match.end() + 20]
+                errors.append(f"{field_location}: NYSE.csv reference is not ../data/NYSE.csv ({context!r})")
 
     return errors
 

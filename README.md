@@ -6,18 +6,18 @@ A portfolio-style collection of personal machine learning practice notebooks. Th
 
 ```text
 machine-learning-practice/
-├── README.md
-├── requirements.txt
-├── .gitignore
-├── data/
-│   └── NYSE.csv
-├── notebooks/
-│   ├── 01_housing_preprocessing.ipynb
-│   ├── 02_time_series_random_forest_svm.ipynb
-│   └── 03_pca_clustering.ipynb
-└── scripts/
-    ├── sanitize_notebooks.py
-    └── validate_repo.py
+|-- README.md
+|-- requirements.txt
+|-- .gitignore
+|-- data/
+|   `-- NYSE.csv
+|-- notebooks/
+|   |-- 01_housing_preprocessing.ipynb
+|   |-- 02_time_series_random_forest_svm.ipynb
+|   `-- 03_pca_clustering.ipynb
+`-- scripts/
+    |-- sanitize_notebooks.py
+    `-- validate_repo.py
 ```
 
 ## Contents

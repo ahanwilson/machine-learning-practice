@@ -28,6 +28,9 @@ GRADING_RE = re.compile(
     r"\s*[\[(]\s*\d+(?:\.\d+)?\s*(?:marks?|points?)\s*[\])]",
     re.IGNORECASE,
 )
+ABSOLUTE_LOCAL_PATH_RE = re.compile(
+    r"(?<![A-Za-z])[A-Za-z]:[\\/][^\s'\"`),]+|/(?:Users|home)/[^\s'\"`),]+"
+)
 
 COMMON_REPLACEMENTS = [
     (r"^###\s*1\(a\)\s*Comment\s*$", "### PCA SVM Result Notes"),
@@ -169,6 +172,41 @@ def update_data_paths(text: str) -> str:
     return text
 
 
+def clean_output_text(text: str) -> str:
+    """Remove machine-specific warning/progress lines from notebook outputs."""
+    lines = text.splitlines(keepends=True)
+    if not lines:
+        return text
+    return "".join(line for line in lines if not ABSOLUTE_LOCAL_PATH_RE.search(line))
+
+
+def clean_outputs(cell: dict) -> None:
+    cleaned_outputs = []
+    for output in cell.get("outputs", []):
+        if "text" in output:
+            text = output["text"]
+            if isinstance(text, list):
+                text = "".join(text)
+            text = clean_output_text(text)
+            if not text:
+                continue
+            output["text"] = text.splitlines(keepends=True)
+
+        if "traceback" in output:
+            traceback = output["traceback"]
+            if isinstance(traceback, list):
+                traceback = [line for line in traceback if not ABSOLUTE_LOCAL_PATH_RE.search(line)]
+                if traceback:
+                    output["traceback"] = traceback
+                else:
+                    output.pop("traceback", None)
+
+        cleaned_outputs.append(output)
+
+    if "outputs" in cell:
+        cell["outputs"] = cleaned_outputs
+
+
 def rewrite_markdown(text: str, notebook_name: str, cell_index: int) -> str:
     text = GRADING_RE.sub("", text)
 
@@ -184,7 +222,7 @@ def rewrite_markdown(text: str, notebook_name: str, cell_index: int) -> str:
     text = text.replace("**Task:** Find", "This section evaluates")
     text = text.replace("**Task:** Using", "This section uses")
     text = text.replace("**Task:**", "**Practice focus:**")
-    text = text.replace("Download the data as a csv file from Canvas files. ", "")
+    text = re.sub(r"Download the data as a csv file from .*? files\. ", "", text)
     text = text.replace(
         "If the data is stored in a file named `NYSE.csv` in the working directory, then loading the data can be done using the code below.",
         "The included dataset is loaded from `../data/NYSE.csv`.",
@@ -245,7 +283,12 @@ def rewrite_markdown(text: str, notebook_name: str, cell_index: int) -> str:
     text = text.replace("if you draw the image for every observation", "if the image is drawn for every observation")
     text = text.replace("whether you see similar faces in each cluster", "whether similar faces appear in each cluster")
     text = text.replace("What performance can you reach on the validation set? What if you append the features from the reduced set to the original features and again search for the best number of clusters?", "The validation performance is recorded, then the k-Means features are appended to the original features and the search for the best number of clusters is repeated.")
-    text = text.replace("This section obtains the daily values of the CPI and unemployment rate from FRED up to 2023-01-01 and then convert the CPI into the yearly inflation rate `inf_data` using the following code. Note that you may have to install the package `pandas_datareader`. Alternatively, you can download the data as a csv file from [Canvas](https://canvas.uw.edu/files/105781273/download?download_frd=1).", "This section obtains the daily values of the CPI and unemployment rate from FRED up to 2023-01-01 and then converts the CPI into the yearly inflation rate `inf_data`. The code below reads public FRED CSV endpoints directly and does not require local credentials.")
+    text = re.sub(
+        r"This section obtains the daily values of the CPI and unemployment rate from FRED up to 2023-01-01 and then convert the CPI into the yearly inflation rate `inf_data` using the following code\.\s+Note that .*?Alternatively, .*?\.",
+        "This section obtains the daily values of the CPI and unemployment rate from FRED up to 2023-01-01 and then converts the CPI into the yearly inflation rate `inf_data`. The code below reads public FRED CSV endpoints directly and does not require local credentials.",
+        text,
+        flags=re.DOTALL,
+    )
     text = text.replace("Based on all of these results, what are the best hyperparameter values?", "Based on these results, the best hyperparameter values are identified.")
     text = text.replace("This section uses the test set, find the RMSE of the best model in part (e).", "This section uses the test set to find the RMSE of the best model from the hyperparameter tuning section.")
     text = text.replace("the voting-classifier section(a)", "the base-classifier section")
@@ -283,6 +326,7 @@ def clean_notebook(path: Path) -> int:
             updated = update_data_paths(text)
             if updated != text:
                 set_source(cell, updated)
+            clean_outputs(cell)
             cleaned_cells.append(cell)
             continue
 
