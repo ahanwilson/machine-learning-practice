@@ -32,6 +32,12 @@ machine-learning-practice/
 
 `NYSE.csv` is included under `data/NYSE.csv`. The time series notebook loads it with the relative path `../data/NYSE.csv`.
 
+The other notebooks use public datasets that are downloaded by the notebook code when they are not already cached:
+
+- `01_housing_preprocessing.ipynb` downloads the California housing dataset from the companion Hands-On Machine Learning data repository and stores it under a local `datasets/` folder.
+- `02_time_series_random_forest_svm.ipynb` uses `sklearn.datasets.fetch_openml()` for MNIST.
+- `03_pca_clustering.ipynb` uses `sklearn.datasets.fetch_openml()` for MNIST, `sklearn.datasets.fetch_olivetti_faces()` for the Olivetti faces dataset, and public FRED CSV URLs for the macroeconomic regime section.
+
 ## Setup
 
 Create and activate a virtual environment, then install the dependencies:
@@ -57,11 +63,13 @@ Start Jupyter from the repository root:
 jupyter notebook
 ```
 
-Open the notebooks in order from the `notebooks/` directory. Running from the repository root keeps relative data paths consistent.
+Open the notebooks in order from the `notebooks/` directory.
+
+The notebook code assumes relative paths are resolved from inside the `notebooks/` directory. This is how many Jupyter frontends launch kernels when a notebook is opened from that folder. If a Jupyter environment starts kernels from the repository root instead, open a terminal in `notebooks/` before launching Jupyter or adjust the working directory before running the time series notebook.
 
 ## Limitations
 
-Some notebooks may not fully execute from a fresh clone without internet access. The housing notebook downloads the California housing dataset, and the PCA/clustering notebook reads public FRED CSV endpoints for the macroeconomic regime section. Several model search and dimensionality-reduction cells can also take a while to run depending on hardware.
+Some notebooks may not fully execute from a fresh clone without internet access because several datasets are downloaded from public sources. Several cells can also take a while to run depending on hardware, especially cross-validation, grid search, randomized search, t-SNE, LLE, learning curves, MLP training, voting ensembles, and stacking.
 
 ## Maintenance Scripts
 

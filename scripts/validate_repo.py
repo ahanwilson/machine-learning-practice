@@ -68,6 +68,10 @@ def validate_notebook(path: Path) -> list[str]:
         text = source_text(cell)
         location = f"{path.relative_to(ROOT)} cell {index}"
 
+        for output_index, output in enumerate(cell.get("outputs", [])):
+            if output.get("output_type") == "error":
+                errors.append(f"{location}.outputs[{output_index}]: contains an error output")
+
         if cell.get("cell_type") == "markdown":
             for phrase in FORBIDDEN_MARKDOWN:
                 if phrase in text:
@@ -78,6 +82,9 @@ def validate_notebook(path: Path) -> list[str]:
         for field_location, field_text in iter_text_fields(cell, location):
             if "Optional exercise: Neural Networks" in field_text:
                 errors.append(f"{field_location}: contains optional neural network section")
+
+            if "Kernel crashed" in field_text or "vscodeJupyterKernelCrash" in field_text:
+                errors.append(f"{field_location}: contains a notebook kernel crash artifact")
 
             if ABSOLUTE_LOCAL_PATH_RE.search(field_text):
                 errors.append(f"{field_location}: contains an absolute local path")

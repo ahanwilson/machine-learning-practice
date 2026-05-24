@@ -11,3 +11,6 @@ venv/
 .pytest_cache/
 .coverage
 htmlcov/
+
+datasets/
+notebooks/datasets/

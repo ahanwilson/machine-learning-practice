@@ -183,6 +183,11 @@ def clean_output_text(text: str) -> str:
 def clean_outputs(cell: dict) -> None:
     cleaned_outputs = []
     for output in cell.get("outputs", []):
+        if output.get("output_type") == "error":
+            traceback_text = "\n".join(output.get("traceback", []))
+            if "Kernel crashed" in traceback_text or "vscodeJupyterKernelCrash" in traceback_text:
+                continue
+
         if "text" in output:
             text = output["text"]
             if isinstance(text, list):
