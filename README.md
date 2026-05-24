@@ -12,9 +12,9 @@ machine-learning-practice/
 |-- data/
 |   `-- NYSE.csv
 |-- notebooks/
-|   |-- 01_housing_preprocessing.ipynb
-|   |-- 02_time_series_random_forest_svm.ipynb
-|   `-- 03_pca_clustering.ipynb
+|   |-- 01_tabular_housing_preprocessing_and_model_tuning.ipynb
+|   |-- 02_time_series_forecasting_and_ensemble_classification.ipynb
+|   `-- 03_dimensionality_reduction_clustering_and_regimes.ipynb
 `-- scripts/
     |-- sanitize_notebooks.py
     `-- validate_repo.py
@@ -24,9 +24,9 @@ machine-learning-practice/
 
 | Notebook | Focus | Concepts covered |
 | --- | --- | --- |
-| `notebooks/01_housing_preprocessing.ipynb` | Housing data preprocessing and model tuning | Missing-value imputation, categorical encoding, feature engineering, scaling, pipelines, linear regression, decision trees, random forests, cross-validation, grid search, randomized search, regularization, learning curves |
-| `notebooks/02_time_series_random_forest_svm.ipynb` | Time series forecasting and classification practice | Lagged features, random forest forecasting, time-series cross-validation, baseline comparison, feature importance, path signatures, SVM classification, voting ensembles, stacking |
-| `notebooks/03_pca_clustering.ipynb` | PCA, dimensionality reduction, clustering, and regimes | PCA with SVM and random forests, t-SNE, LLE, k-Means clustering, silhouette analysis, classification with cluster features, macroeconomic regime clustering |
+| `notebooks/01_tabular_housing_preprocessing_and_model_tuning.ipynb` | Housing data preprocessing and model tuning | Missing-value imputation, categorical encoding, feature engineering, scaling, pipelines, linear regression, decision trees, random forests, cross-validation, grid search, randomized search, regularization, learning curves |
+| `notebooks/02_time_series_forecasting_and_ensemble_classification.ipynb` | Time series forecasting and classification practice | Lagged features, random forest forecasting, time-series cross-validation, baseline comparison, feature importance, path signatures, SVM classification, voting ensembles, stacking |
+| `notebooks/03_dimensionality_reduction_clustering_and_regimes.ipynb` | PCA, dimensionality reduction, clustering, and regimes | PCA with SVM and random forests, t-SNE, LLE, k-Means clustering, silhouette analysis, classification with cluster features, macroeconomic regime clustering |
 
 ## Data
 
@@ -34,9 +34,9 @@ machine-learning-practice/
 
 The other notebooks use public datasets that are downloaded by the notebook code when they are not already cached:
 
-- `01_housing_preprocessing.ipynb` downloads the California housing dataset from the companion Hands-On Machine Learning data repository and stores it under a local `datasets/` folder.
-- `02_time_series_random_forest_svm.ipynb` uses `sklearn.datasets.fetch_openml()` for MNIST.
-- `03_pca_clustering.ipynb` uses `sklearn.datasets.fetch_openml()` for MNIST, `sklearn.datasets.fetch_olivetti_faces()` for the Olivetti faces dataset, and public FRED CSV URLs for the macroeconomic regime section.
+- `01_tabular_housing_preprocessing_and_model_tuning.ipynb` downloads the California housing dataset from the companion Hands-On Machine Learning data repository and stores it under a local `datasets/` folder.
+- `02_time_series_forecasting_and_ensemble_classification.ipynb` uses `sklearn.datasets.fetch_openml()` for MNIST.
+- `03_dimensionality_reduction_clustering_and_regimes.ipynb` uses `sklearn.datasets.fetch_openml()` for MNIST, `sklearn.datasets.fetch_olivetti_faces()` for the Olivetti faces dataset, and public FRED CSV URLs for the macroeconomic regime section.
 
 ## Setup
 

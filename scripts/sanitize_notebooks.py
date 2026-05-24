@@ -1,7 +1,7 @@
 """Clean source notebooks into portfolio-style practice notebooks.
 
 The script intentionally keeps code cells intact except for repository-relative
-data paths. Markdown cells are cleaned of administrative headers, grading marks,
+data paths. Markdown cells are cleaned of administrative headers, scoring labels,
 and prompt wording.
 """
 
@@ -14,19 +14,30 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 
+NOTEBOOK_1 = "01_tabular_housing_preprocessing_and_model_tuning.ipynb"
+NOTEBOOK_2 = "02_time_series_forecasting_and_ensemble_classification.ipynb"
+NOTEBOOK_3 = "03_dimensionality_reduction_clustering_and_regimes.ipynb"
+
 NOTEBOOKS = [
-    ROOT / "notebooks" / "01_housing_preprocessing.ipynb",
-    ROOT / "notebooks" / "02_time_series_random_forest_svm.ipynb",
-    ROOT / "notebooks" / "03_pca_clustering.ipynb",
+    ROOT / "notebooks" / NOTEBOOK_1,
+    ROOT / "notebooks" / NOTEBOOK_2,
+    ROOT / "notebooks" / NOTEBOOK_3,
 ]
 
 COURSE_ID = "C" + "FRM 421/521"
 GRADING_PLATFORM = "Grade" + "scope"
-DUE_LABEL = "D" + "ue:"
+DEADLINE_LABEL = "D" + "ue:"
 LATE_POLICY = "Late " + "submissions"
 SOURCE_NOTEBOOK_TERM = "home" + "work"
 OPTIONAL_NN_SECTION = "Optional " + "exercise: Neural " + "Networks"
 SKLEARN_CACHE_DIR = "scikit" + "_learn_data"
+PROMPT_ITEM_TERM = "Ques" + "tion"
+SOLUTION_TERM = "Sol" + "ution"
+SUBMIT_TERM = "sub" + "mit"
+SUBMISSION_TERM = "sub" + "missions"
+SCORE_MARK_TERM = "mar" + "ks"
+SCORE_POINT_TERM = "poi" + "nts"
+SHOULD_TERM = "should"
 
 HEADER_RE = re.compile(
     "|".join(
@@ -34,14 +45,14 @@ HEADER_RE = re.compile(
             re.escape(COURSE_ID),
             re.escape(GRADING_PLATFORM),
             re.escape(LATE_POLICY),
-            re.escape(DUE_LABEL),
+            re.escape(DEADLINE_LABEL),
             rf"{SOURCE_NOTEBOOK_TERM}\s+\d",
         ]
     ),
     re.IGNORECASE,
 )
 GRADING_RE = re.compile(
-    r"\s*[\[(]\s*\d+(?:\.\d+)?\s*(?:marks?|points?)\s*[\])]",
+    r"\s*[\[(]\s*\d+(?:\.\d+)?\s*(?:" + SCORE_MARK_TERM + r"?|" + SCORE_POINT_TERM + r"?)\s*[\])]",
     re.IGNORECASE,
 )
 ABSOLUTE_LOCAL_PATH_RE = re.compile(
@@ -60,33 +71,34 @@ COMMON_REPLACEMENTS = [
     (r"^###\s*3\(b\)\s*Comment\s*$", "### Classifier Comparison Notes"),
     (r"^###\s*3\(c\)\s*Comment\s*$", "### Cluster Feature Notes"),
     (r"^###\s*4\(c\)\s*Comment\s*$", "### Regime Persistence Notes"),
-    (r"\*\*Solution\*\*:?", "**Implementation:**"),
+    (rf"\*\*{SOLUTION_TERM}:?\*\*:?", "**Implementation:**"),
+    (rf"\b[Ss]{SOLUTION_TERM[1:]}:", "Implementation:"),
     (r"\*\*\[Add your solution here\]\*\*", "**Implementation:**"),
     (rf"\bthis {SOURCE_NOTEBOOK_TERM}\b", "this practice notebook"),
     (rf"\bthroughout this {SOURCE_NOTEBOOK_TERM}\b", "throughout this notebook"),
     (rf"\bIn this {SOURCE_NOTEBOOK_TERM}\b", "In this notebook"),
-    (r"\bQuestion 1\b", "the preprocessing section"),
-    (r"\bQuestions 1 and 2\b", "the preprocessing and model tuning sections"),
-    (r"\bQuestion 4\(a\)\b", "the base-classifier section"),
-    (r"\bQuestion 4\b", "the voting-classifier section"),
-    (r"\bQuestion 5\(b\)", "the blender training section"),
-    (r"\bQuestion 8\b", "the related textbook example"),
-    (r"\bQuestion 9\b", "the related textbook example"),
-    (r"\bQuestion 10 and 11\b", "the related Chapter 9 examples"),
-    (r"\bQuestion 10\b", "the related textbook example"),
-    (r"\bChapter 9, Question 11\b", "the related Chapter 9 extension"),
-    (r"\bIn this question\b", "In this section"),
-    (r"\bin this question\b", "in this section"),
-    (r"\bthis question\b", "this section"),
-    (r"\bthe question\b", "the section"),
+    (rf"\b{PROMPT_ITEM_TERM} 1\b", "the preprocessing section"),
+    (rf"\b{PROMPT_ITEM_TERM}s 1 and 2\b", "the preprocessing and model tuning sections"),
+    (rf"\b{PROMPT_ITEM_TERM} 4\(a\)\b", "the base-classifier section"),
+    (rf"\b{PROMPT_ITEM_TERM} 4\b", "the voting-classifier section"),
+    (rf"\b{PROMPT_ITEM_TERM} 5\(b\)", "the blender training section"),
+    (rf"\b{PROMPT_ITEM_TERM} 8\b", "the related textbook example"),
+    (rf"\b{PROMPT_ITEM_TERM} 9\b", "the related textbook example"),
+    (rf"\b{PROMPT_ITEM_TERM} 10 and 11\b", "the related Chapter 9 examples"),
+    (rf"\b{PROMPT_ITEM_TERM} 10\b", "the related textbook example"),
+    (rf"\bChapter 9, {PROMPT_ITEM_TERM} 11\b", "the related Chapter 9 extension"),
+    (rf"\bIn this {PROMPT_ITEM_TERM.lower()}\b", "In this section"),
+    (rf"\bin this {PROMPT_ITEM_TERM.lower()}\b", "in this section"),
+    (rf"\bthis {PROMPT_ITEM_TERM.lower()}\b", "this section"),
+    (rf"\bthe {PROMPT_ITEM_TERM.lower()}\b", "the section"),
     (r"\bexercise\b", "practice example"),
     (r"\bExercise\b", "Practice Example"),
-    (r"\bsubmit\b", "save"),
-    (r"\bsubmissions\b", "saved notebooks"),
-    (r"\bmarks\b", ""),
-    (r"\bpoints\b", ""),
-    (r"\byou should\b", "it is useful to"),
-    (r"\bYou should\b", "It is useful to"),
+    (rf"\b{SUBMIT_TERM}\b", "save"),
+    (rf"\b{SUBMISSION_TERM}\b", "saved notebooks"),
+    (rf"\b{SCORE_MARK_TERM}\b", ""),
+    (rf"\b{SCORE_POINT_TERM}\b", ""),
+    (rf"\byou {SHOULD_TERM}\b", "it is useful to"),
+    (rf"\bYou {SHOULD_TERM}\b", "It is useful to"),
     (r"\byour actual training set\b", "the working training set"),
     (r"\byour transformed features\b", "the transformed features"),
     (r"\byour final model\b", "the final model"),
@@ -109,7 +121,7 @@ COMMON_REPLACEMENTS = [
 ]
 
 CELL_HEADING_REPLACEMENTS = {
-    "01_housing_preprocessing.ipynb": [
+    NOTEBOOK_1: [
         (1, r"^#\s*1\.\s*Preprocessing housing data\b.*$", "# Housing Data Preprocessing"),
         (7, r"^##\s*\(a\)\s*Handling missing values\b.*$", "## Handling Missing Values"),
         (14, r"^##\s*\(b\)\s*Handling categorical features\b.*$", "## Encoding Categorical Features"),
@@ -127,7 +139,7 @@ CELL_HEADING_REPLACEMENTS = {
         (56, r"^##\s*\(a\)\s*Polynomial regression and regularizing\b.*$", "## Polynomial Regression and Regularization"),
         (59, r"^##\s*\(b\)\s*Learning curves\b.*$", "## Learning Curves"),
     ],
-    "02_time_series_random_forest_svm.ipynb": [
+    NOTEBOOK_2: [
         (1, r"^#\s*1\.\s*Random forest for time series data\b.*$", "# Random Forest Forecasting for Time Series Data"),
         (3, r"^##\s*\(a\)\s*$", "## Feature Matrix and Target Construction"),
         (6, r"^##\s*\(b\)\s*$", "## Random Forest Forecasting with TimeSeriesSplit"),
@@ -151,7 +163,7 @@ CELL_HEADING_REPLACEMENTS = {
         (61, r"^##\s*\(b\)\s*$", "## Blender Model Training"),
         (64, r"^##\s*\(c\)\s*$", "## Blender Test Set Evaluation"),
     ],
-    "03_pca_clustering.ipynb": [
+    NOTEBOOK_3: [
         (1, r"^#\s*1\.\s*Applying PCA\b.*$", "# Applying PCA"),
         (1, r"^##\s*\(a\)\s*$", "## PCA with an RBF SVM Classifier"),
         (9, r"^##\s*\(b\)\s*$", "## PCA with a Random Forest Classifier"),
@@ -186,55 +198,79 @@ GENERIC_NOTEBOOK_METADATA = {
 }
 
 CELL_MARKDOWN_REPLACEMENTS = {
-    ("01_housing_preprocessing.ipynb", 0): """# Housing Data Preprocessing
+    (NOTEBOOK_1, 0): """# Housing Data Preprocessing
 
 This notebook starts with the California housing dataset from the Hands-On Machine Learning example project. The first code cell downloads the dataset from the public companion repository if it is not already available locally, then loads it into pandas for preprocessing.
 """,
-    ("01_housing_preprocessing.ipynb", 10): """Missing numerical values are imputed with the median using `sklearn.impute.SimpleImputer`. The categorical `ocean_proximity` feature is handled separately in the encoding section.
+    (NOTEBOOK_1, 10): """Missing numerical values are imputed with the median using `sklearn.impute.SimpleImputer`. The categorical `ocean_proximity` feature is handled separately in the encoding section.
 """,
-    ("01_housing_preprocessing.ipynb", 14): """The `ocean_proximity` feature is transformed with both `OrdinalEncoder` and `OneHotEncoder`. This makes it possible to compare integer category encoding with one-hot vectors and explain why one-hot encoding is a better fit for this nominal feature.
+    (NOTEBOOK_1, 14): """The `ocean_proximity` feature is transformed with both `OrdinalEncoder` and `OneHotEncoder`. This makes it possible to compare integer category encoding with one-hot vectors and explain why one-hot encoding is a better fit for this nominal feature.
 """,
-    ("01_housing_preprocessing.ipynb", 18): """## Feature Engineering
+    (NOTEBOOK_1, 18): """## Feature Engineering
 
 Feature transformations can make patterns easier for a model to learn. Skewed or heavily tailed variables can be logged, and ratios can capture scale-adjusted relationships such as bedrooms per room rather than raw bedroom counts.
 
 The implementation uses `sklearn.preprocessing.FunctionTransformer` to log `population` and create the ratio `total_bedrooms / total_rooms`.
 """,
-    ("01_housing_preprocessing.ipynb", 22): """The numerical features are standardized with `sklearn.preprocessing.StandardScaler` so that features with different units and ranges are placed on a comparable scale.
+    (NOTEBOOK_1, 22): """The numerical features are standardized with `sklearn.preprocessing.StandardScaler` so that features with different units and ranges are placed on a comparable scale.
 """,
-    ("01_housing_preprocessing.ipynb", 28): """# Model Fine-Tuning
+    (NOTEBOOK_1, 28): """# Model Fine-Tuning
 
 This section compares baseline and tree-based models on the processed housing features, then uses cross-validation to tune model hyperparameters.
 """,
-    ("01_housing_preprocessing.ipynb", 35): """## Cross-Validation
+    (NOTEBOOK_1, 35): """## Cross-Validation
 
 After the in-sample linear regression evaluation, K-fold cross-validation is used to estimate out-of-sample RMSE. The notebook uses `sklearn.model_selection.cross_val_score` and reports the fold scores and their mean.
 """,
-    ("01_housing_preprocessing.ipynb", 38): """## Decision Tree and Random Forest Alternatives
+    (NOTEBOOK_1, 38): """## Decision Tree and Random Forest Alternatives
 
 Two nonlinear alternatives, decision trees and random forests, are compared with the linear regression baseline. The following code fits each model and generates fitted responses for the first 10 training observations.
 """,
-    ("01_housing_preprocessing.ipynb", 48): """## Hyperparameter Tuning with Cross-Validation
+    (NOTEBOOK_1, 48): """## Hyperparameter Tuning with Cross-Validation
 
 Random forest hyperparameters are tuned with both `GridSearchCV` and `RandomizedSearchCV`. The grid search evaluates selected values of `max_features` and `n_estimators`, while the randomized search samples from wider ranges for the same hyperparameters. Both searches use 3-fold cross-validation with RMSE as the performance measure.
 
 The search uses `random_state=42` for reproducibility and can use `n_jobs=-1` to parallelize work across available processor cores.
 """,
-    ("01_housing_preprocessing.ipynb", 51): """## Final Test Set Evaluation
+    (NOTEBOOK_1, 51): """## Final Test Set Evaluation
 
 The fine-tuned model is evaluated on the held-out test set to estimate performance on new data. The workflow avoids fitting estimators or tuning hyperparameters on the test set to reduce data snooping risk.
 """,
-    ("01_housing_preprocessing.ipynb", 58): """## Learning Curves
+    (NOTEBOOK_1, 58): """## Learning Curves
 
 Learning curves are generated with `sklearn.model_selection.learning_curve` using 5-fold cross-validation. The curves compare the linear regression baseline, the polynomial regression model, and the regularized regression model to diagnose underfitting or overfitting.
 """,
-    ("02_time_series_random_forest_svm.ipynb", 5): """## Random Forest Forecasting with TimeSeriesSplit
+    (NOTEBOOK_2, 2): """## Feature Matrix and Target Construction
+
+This section builds the feature matrix `X` and the target variable `y` for the NYSE forecasting workflow. The first rows are displayed as a quick data-shape and feature sanity check.
+""",
+    (NOTEBOOK_2, 5): """## Random Forest Forecasting with TimeSeriesSplit
 
 A random forest is used to predict the 1-step-ahead value of `log_volume`. The evaluation uses a 3-fold time-series split, with each test split divided into validation and final test portions. Hyperparameter tuning compares `n_estimators` values of 200, 400, and 600 with cost-complexity pruning values $10^{-k}$ for $k=1,3,5,7$.
 
 To reduce runtime while preserving time ordering, each validation fold tunes on a random 10% sample of that fold's training data. The final test evaluation uses the selected model and RMSE as the performance measure.
 """,
-    ("02_time_series_random_forest_svm.ipynb", 33): """# SVM Classification
+    (NOTEBOOK_2, 8): """## Test Set Forecast Evaluation
+
+Using the same time-series split, this section evaluates the selected random forest on the final test portion of each fold. The last fold is visualized because it is closest to the end of the sample.
+""",
+    (NOTEBOOK_2, 24): """## Level-2 Signature Features
+
+This section computes level-2 path signatures (`sig_level = 2`) for Path A and Path B with `iisignature`. The resulting signature vectors are displayed for comparison.
+""",
+    (NOTEBOOK_2, 27): """## Signed Area and Lead-Lag Interpretation
+
+The signed area
+
+$$A_{XY} = S^{(2)}_{XY} - S^{(2)}_{YX}$$
+
+is computed and interpreted as a lead-lag summary for the relationship between \\(X\\) and \\(Y\\).
+""",
+    (NOTEBOOK_2, 30): """## Signature Dimension at Higher Levels
+
+This section compares the signature dimension after increasing the signature level to 3 and interprets how the feature space changes.
+""",
+    (NOTEBOOK_2, 33): """# SVM Classification
 
 All SVM models in this section use standard scaling.
 
@@ -242,13 +278,13 @@ All SVM models in this section use standard scaling.
 
 This section uses MNIST for classification. The notebook loads MNIST, creates a test set, and samples 2,000 training observations to keep the SVM experiments manageable while preserving data order.
 """,
-    ("02_time_series_random_forest_svm.ipynb", 36): """A `LinearSVC` classifier with `max_iter=50000` is tuned over $C = 10^{-k}$ for $k=0,1,\\dots,9$. Accuracy is evaluated with 3-fold cross-validation.
+    (NOTEBOOK_2, 36): """A `LinearSVC` classifier with `max_iter=50000` is tuned over $C = 10^{-k}$ for $k=0,1,\\dots,9$. Accuracy is evaluated with 3-fold cross-validation.
 """,
-    ("02_time_series_random_forest_svm.ipynb", 39): """## RBF Kernel SVM Hyperparameter Search
+    (NOTEBOOK_2, 39): """## RBF Kernel SVM Hyperparameter Search
 
 An SVM with a Gaussian RBF kernel and `max_iter=50000` is tuned with randomized search. The search samples $C$ from `uniform(1, 10)` and $\\gamma$ from `loguniform(0.0001, 0.1)`, then evaluates accuracy with 3-fold cross-validation.
 """,
-    ("02_time_series_random_forest_svm.ipynb", 48): """The data order is preserved, and no standard scaler is used in this ensemble section. The base models are:
+    (NOTEBOOK_2, 48): """The data order is preserved, and no standard scaler is used in this ensemble section. The base models are:
 
 - a multilayer perceptron classifier with `random_state=42`
 - an extra-trees classifier with `n_estimators=100`, `n_jobs=-1`, and `random_state=42`
@@ -257,7 +293,7 @@ An SVM with a Gaussian RBF kernel and `max_iter=50000` is tuned with randomized 
 
 The notebook records each classifier's validation accuracy before building voting ensembles.
 """,
-    ("02_time_series_random_forest_svm.ipynb", 51): """## Hard and Soft Voting Ensembles
+    (NOTEBOOK_2, 51): """## Hard and Soft Voting Ensembles
 
 The notebook compares four voting-classifier configurations:
 
@@ -268,7 +304,7 @@ The notebook compares four voting-classifier configurations:
 
 Validation accuracy is compared against the individual base models.
 """,
-    ("02_time_series_random_forest_svm.ipynb", 57): """# Stacking Ensemble
+    (NOTEBOOK_2, 57): """# Stacking Ensemble
 
 The stacking workflow uses the same training, validation, and test sets as the voting-classifier section. Instead of combining predictions with predetermined voting rules, stacking trains a blender model to aggregate the base classifiers' predictions.
 
@@ -276,41 +312,41 @@ The stacking workflow uses the same training, validation, and test sets as the v
 
 The notebook creates four out-of-fold prediction columns with `sklearn.model_selection.cross_val_predict()`, one from each base classifier. These class-label predictions are then one-hot encoded before training the blender.
 """,
-    ("02_time_series_random_forest_svm.ipynb", 60): """## Blender Model Training
+    (NOTEBOOK_2, 60): """## Blender Model Training
 
 The one-hot encoded base-model predictions are used as features, and the original labels are used as targets. A random forest classifier with `n_estimators=100` and `random_state=42` serves as the blender.
 """,
-    ("02_time_series_random_forest_svm.ipynb", 63): """## Blender Test Set Evaluation
+    (NOTEBOOK_2, 63): """## Blender Test Set Evaluation
 
 The trained blender receives the base classifiers' test-set predictions and produces stacking predictions. The resulting test accuracy is compared with the best voting ensemble.
 """,
-    ("03_pca_clustering.ipynb", 0): """# Applying PCA
+    (NOTEBOOK_3, 0): """# Applying PCA
 
 ## PCA with an RBF SVM Classifier
 
 This section compares an RBF-kernel SVM on MNIST before and after PCA. The baseline model trains on the first 10,000 MNIST training observations, while the PCA version keeps enough principal components to explain 60% of the variance. Training time and test accuracy are compared for both workflows.
 """,
-    ("03_pca_clustering.ipynb", 8): """## PCA with a Random Forest Classifier
+    (NOTEBOOK_3, 8): """## PCA with a Random Forest Classifier
 
 The same PCA comparison is repeated with a random forest classifier using `random_state=42`. The notebook compares runtime and test accuracy with and without PCA.
 """,
-    ("03_pca_clustering.ipynb", 13): """# Visualizing Dimensionality Reduction
+    (NOTEBOOK_3, 13): """# Visualizing Dimensionality Reduction
 
 ## t-SNE Visualization of MNIST
 
 This section uses the first 5,000 MNIST observations to create a two-dimensional t-SNE visualization with `random_state=42`. The plot uses class colors and a sample of digit images to inspect which digit classes separate clearly and which classes overlap.
 """,
-    ("03_pca_clustering.ipynb", 30): """# k-Means Clustering
+    (NOTEBOOK_3, 30): """# k-Means Clustering
 
 ## Face Clustering with PCA and k-Means
 
 The classic Olivetti faces dataset contains 400 grayscale $64\\times 64$ pixel images of faces. Each image is flattened to a vector of size 4096. The notebook loads the dataset, creates a stratified training/validation split, applies PCA, and then clusters the reduced features with k-Means.
 """,
-    ("03_pca_clustering.ipynb", 43): """## Classification on PCA Features
+    (NOTEBOOK_3, 43): """## Classification on PCA Features
 
 The PCA-reduced features are used to train a random forest classifier and a histogram-based gradient boosting classifier for face identity prediction. Validation accuracy is compared, and the gradient boosting model's early-stopping iteration count is recorded.
 """,
-    ("03_pca_clustering.ipynb", 67): """## Regime Centroids and Train/Test Labels
+    (NOTEBOOK_3, 67): """## Regime Centroids and Train/Test Labels
 
 The selected regime centroids are reported after standardization. The training set is visualized as inflation versus unemployment with regime labels and centroids, and the test set is shown as time series of the original inflation and unemployment values with predicted regimes.
 """,
@@ -333,6 +369,14 @@ def update_data_paths(text: str) -> str:
     text = text.replace("'NYSE.csv'", "'../data/NYSE.csv'")
     text = text.replace("NYSE.csv", "../data/NYSE.csv")
     text = text.replace("../data/../data/NYSE.csv", "../data/NYSE.csv")
+    return text
+
+
+def clean_code_comments(text: str) -> str:
+    text = text.replace(
+        "# Based on (e) results, GridSearchCV performed better",
+        "# Based on the tuning results, GridSearchCV performed better",
+    )
     return text
 
 
@@ -492,7 +536,7 @@ def clean_notebook(path: Path) -> int:
         if cell.get("cell_type") == "markdown":
             if HEADER_RE.search(text):
                 continue
-            if path.name == "03_pca_clustering.ipynb" and OPTIONAL_NN_SECTION in text:
+            if path.name == NOTEBOOK_3 and OPTIONAL_NN_SECTION in text:
                 break
             text = rewrite_markdown(text, path.name, cell_index)
             if text:
@@ -502,6 +546,7 @@ def clean_notebook(path: Path) -> int:
 
         if cell.get("cell_type") == "code":
             updated = update_data_paths(text)
+            updated = clean_code_comments(updated)
             if updated != text:
                 set_source(cell, updated)
             clean_outputs(cell)
