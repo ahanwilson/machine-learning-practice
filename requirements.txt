@@ -1,7 +1,7 @@
-numpy
-pandas
-matplotlib
-scikit-learn
-scipy
-iisignature
-jupyter
+numpy>=1.26
+pandas>=2.0
+matplotlib>=3.8
+scikit-learn>=1.4
+scipy>=1.11
+iisignature>=0.24
+jupyter>=1.0

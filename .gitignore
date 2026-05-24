@@ -3,7 +3,12 @@ __pycache__/
 .venv/
 venv/
 .env
+.env.*
 .DS_Store
+*.pem
+*.key
+id_rsa
+id_rsa.pub
 
 *.py[cod]
 *.pyo

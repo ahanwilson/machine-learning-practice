@@ -81,6 +81,7 @@ SECRET_RE = re.compile(
     r"(?:api[_-]?key|password|secret|token)\s*[:=]\s*['\"][^'\"]+['\"]",
     re.IGNORECASE,
 )
+UNSAFE_TAR_EXTRACT_RE = re.compile(r"\.extractall\s*\(")
 PROMPT_TONE_RE = re.compile(
     r"\bHint:|\bTask:|\bRead the|\bTry using\b|"
     r"\bReport the|\bWhich method|\bHow many regimes|\bUse the|\bLoad the|"
@@ -167,6 +168,9 @@ def validate_notebook(path: Path) -> list[str]:
             errors.append(f"{location}: source contains a scoring label")
         if PROMPT_TONE_RE.search(text):
             errors.append(f"{location}: source contains prompt-style wording")
+
+        if UNSAFE_TAR_EXTRACT_RE.search(text) and "safe_extract_tar" not in text:
+            errors.append(f"{location}: contains tarfile.extractall without the safe extraction helper")
 
         for output_index, output in enumerate(cell.get("outputs", [])):
             if output.get("output_type") == "error":
