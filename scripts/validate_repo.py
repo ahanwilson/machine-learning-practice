@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import csv
 import json
 import re
 import sys
@@ -37,6 +38,7 @@ REQUIRED_PATHS = [
     ROOT / "notebooks" / NOTEBOOK_4,
     ROOT / "notebooks" / NOTEBOOK_5,
     ROOT / "data" / "NYSE.csv",
+    ROOT / "data" / "bank_cleaned.csv",
     ROOT / "scripts" / "sanitize_notebooks.py",
     ROOT / "scripts" / "validate_repo.py",
 ]
@@ -282,6 +284,23 @@ def main() -> int:
         old_path = ROOT / "notebooks" / old_name
         if old_path.exists():
             errors.append(f"Old notebook filename should not remain: {old_path.relative_to(ROOT)}")
+
+    gitignore_path = ROOT / ".gitignore"
+    if gitignore_path.exists():
+        ignored_entries = {
+            line.strip()
+            for line in gitignore_path.read_text(encoding="utf-8").splitlines()
+            if line.strip() and not line.lstrip().startswith("#")
+        }
+        if "data/bank_cleaned.csv" in ignored_entries:
+            errors.append(".gitignore: data/bank_cleaned.csv must not be ignored")
+
+    bank_data_path = ROOT / "data" / "bank_cleaned.csv"
+    if bank_data_path.exists():
+        with bank_data_path.open(encoding="utf-8-sig", newline="") as bank_file:
+            header = next(csv.reader(bank_file), [])
+        if "response_binary" not in header:
+            errors.append("data/bank_cleaned.csv: missing required response_binary column")
 
     for path in [
         ROOT / "README.md",

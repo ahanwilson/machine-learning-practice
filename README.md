@@ -55,6 +55,7 @@ The notebooks mix code experiments, outputs, and short interpretation notes. Som
 Included data:
 
 - `data/NYSE.csv` is included in the repository and used by the time series notebook through `../data/NYSE.csv`.
+- `data/bank_cleaned.csv` is included for the Portuguese Bank Marketing classification workflow and is loaded through `../data/bank_cleaned.csv`.
 
 Downloaded public data:
 
@@ -65,13 +66,12 @@ Downloaded public data:
 
 Data that must be obtained separately:
 
-- The neural-network and exchange-rate notebook requires the Portuguese Bank Marketing `bank_cleaned.csv` dataset. It is not included in this repository. Place an authorized copy at `data/bank_cleaned.csv` before running the bank classification section.
 - The mortgage delinquency notebook uses the Freddie Mac Single-Family Loan-Level Dataset. The raw sample files are not included in this repository. Access is subject to Freddie Mac's current terms and may require registration.
 - After obtaining the sample data, place the files under `data/freddie_mac/orig/` and `data/freddie_mac/svcg/`. The notebook expects `sample_orig_2018.txt` through `sample_orig_2022.txt` in `orig/`, and `sample_svcg_2018.txt` through `sample_svcg_2022.txt` in `svcg/`.
 
 Limitation:
 
-Some notebooks need internet access the first time they are run because datasets are fetched from public sources. The neural-network notebook's bank classification section and the mortgage notebook cannot run from a fresh clone until their separately distributed data files are added in the directory layouts above.
+Some notebooks need internet access the first time they are run because datasets are fetched from public sources. The mortgage notebook cannot run from a fresh clone until its separately distributed data files are added in the directory layout above.
 
 ## Setup
 
@@ -157,6 +157,7 @@ What the scripts check:
 - notebook markdown avoids course-specific wording
 - notebook metadata does not include local environment details
 - `NYSE.csv` references use `../data/NYSE.csv`
-- the neural-network notebook uses `../data/bank_cleaned.csv` and contains no course or assignment framing
+- `bank_cleaned.csv` exists under `data/`, is not ignored, and is referenced as `../data/bank_cleaned.csv`
+- the neural-network notebook contains no course or assignment framing
 - the mortgage notebook starts with the public project title, contains no group identity wording, and uses `../data/freddie_mac`
 - raw source notebooks are not left in the repository root
