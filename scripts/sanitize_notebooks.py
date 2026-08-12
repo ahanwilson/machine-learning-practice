@@ -17,12 +17,18 @@ ROOT = Path(__file__).resolve().parents[1]
 NOTEBOOK_1 = "01_tabular_housing_preprocessing_and_model_tuning.ipynb"
 NOTEBOOK_2 = "02_time_series_forecasting_and_ensemble_classification.ipynb"
 NOTEBOOK_3 = "03_dimensionality_reduction_clustering_and_regimes.ipynb"
+NOTEBOOK_4 = "04_predicting_serious_delinquency_in_us_mortgage_loans.ipynb"
 
 NOTEBOOKS = [
     ROOT / "notebooks" / NOTEBOOK_1,
     ROOT / "notebooks" / NOTEBOOK_2,
     ROOT / "notebooks" / NOTEBOOK_3,
+    ROOT / "notebooks" / NOTEBOOK_4,
 ]
+
+MORTGAGE_PROJECT_TITLE = (
+    "Predicting Serious Delinquency in U.S. Mortgage Loans Using Machine Learning Models"
+)
 
 COURSE_ID = "C" + "FRM 421/521"
 GRADING_PLATFORM = "Grade" + "scope"
@@ -372,6 +378,17 @@ def update_data_paths(text: str) -> str:
     return text
 
 
+def clean_mortgage_code(text: str) -> str:
+    """Keep model code intact while removing unused imports and fixing data paths."""
+    text = re.sub(r"^from pyexpat import features\s*\n?", "", text, flags=re.MULTILINE)
+    text = re.sub(r"^from werkzeug\.debug\.repr import missing\s*\n?", "", text, flags=re.MULTILINE)
+    text = text.replace("Path('data')", "Path('../data/freddie_mac')")
+    text = text.replace('Path("data")', 'Path("../data/freddie_mac")')
+    text = text.replace("Path('processed_data')", "Path('../data/freddie_mac/processed')")
+    text = text.replace('Path("processed_data")', 'Path("../data/freddie_mac/processed")')
+    return text
+
+
 def clean_code_comments(text: str) -> str:
     text = text.replace(
         "# Based on (e) results, GridSearchCV performed better",
@@ -420,7 +437,108 @@ def clean_outputs(cell: dict) -> None:
         cell["outputs"] = cleaned_outputs
 
 
+def rewrite_mortgage_markdown(text: str) -> str:
+    """Reframe the mortgage report as a consistently styled personal project."""
+    text = text.replace("ˇs", "'s")
+    text = text.replace("#### Column layout reference (Freddie Mac SFLLD)", "#### Column Layout Reference")
+    text = text.replace("#### Load the raw files", "#### Raw File Loading")
+    text = text.replace(
+        "#### Construct the target (24-month serious delinquency)",
+        "#### Serious Delinquency Target Construction",
+    )
+    text = text.replace("#### Select features", "#### Feature Selection")
+    text = text.replace(
+        "#### Cleaning, encoding & time-based split",
+        "#### Cleaning, Encoding, and Time-Based Split",
+    )
+    text = text.replace("#### Baseline model", "#### Baseline Model")
+    text = text.replace("#### Handling class imbalance", "#### Handling Class Imbalance")
+    text = text.replace("#### Threshold selection", "#### Threshold Selection")
+    text = text.replace("#### Hyperparameter tuning", "#### Hyperparameter Tuning")
+    text = text.replace("#### Final model & test evaluation", "#### Final Model and Test Evaluation")
+    text = text.replace("#### Feature importance & interpretation", "#### Feature Importance and Interpretation")
+    text = text.replace("#### XGBoost — summary of results", "#### XGBoost Result Summary")
+    text = re.sub(
+        r"^\s*\*\*Implemented by:\*\*[^\n]*(?:\n|$)",
+        "",
+        text,
+        flags=re.IGNORECASE | re.MULTILINE,
+    )
+
+    heading_replacements = [
+        (r"^#\s*1\.\s*Introduction\s*$", f"# {MORTGAGE_PROJECT_TITLE}\n\n## Introduction"),
+        (r"^##\s*1\.1\s*Problem Statement\s*$", "### Problem Statement"),
+        (r"^##\s*1\.2\s*Related Literature\s*$", "### Related Literature"),
+        (r"^##\s*1\.3\s*Contribution\s*$", "### Project Contribution"),
+        (r"^#\s*2\.\s*Data Description\s*$", "## Data Description"),
+        (r"^##\s*2\.1\s*Data Source\s*$", "### Data Source"),
+        (r"^##\s*2\.2\s*Data Structure\s*$", "### Data Structure"),
+        (r"^##\s*2\.3\s*Target Variable\s*$", "### Target Variable"),
+        (r"^##\s*2\.4\s*Features\s*$", "### Features"),
+        (r"^##\s*2\.5\s*Data Cleaning and Preprocessing\s*$", "### Data Cleaning and Preprocessing"),
+        (r"^###\s*2\.2a\s*Column layout reference \(Freddie Mac SFLLD\)\s*$", "#### Column Layout Reference"),
+        (r"^###\s*2\.2b\s*Load the raw files\s*$", "#### Raw File Loading"),
+        (r"^###\s*2\.3a\s*Construct the target \(24-month serious delinquency\)\s*$", "#### Serious Delinquency Target Construction"),
+        (r"^###\s*2\.4a\s*Select features\s*$", "#### Feature Selection"),
+        (r"^###\s*2\.5a\s*Cleaning, encoding & time-based split\s*$", "#### Cleaning, Encoding, and Time-Based Split"),
+        (r"^#\s*3\.\s*Exploratory Data Analysis\s*$", "## Exploratory Data Analysis"),
+        (r"^#\s*4\.\s*Methodology\s*$", "## Methodology"),
+        (r"^##\s*4\.1\s*Overview of Models\s*$", "### Model Overview"),
+        (r"^##\s*4\.\d\s*Model [0-9]+\s*:\s*", "### "),
+        (r"^#{3,4}\s*4\.\d\.\d\s*", "#### "),
+        (r"^#\s*5\.\s*Results\s*$", "## Results"),
+        (r"^##\s*5\.1\s*", "### "),
+        (r"^##\s*5\.2\s*", "### "),
+        (r"^##\s*5\.3\s*", "### "),
+        (r"^###\s*5\.3\.\d\s*", "#### "),
+        (r"^#\s*6\.\s*Discussions and Conclusions\s*$", "## Discussion and Conclusions"),
+        (r"^#\s*Appendix\.\s*Reproducibility\s*$", "## Reproducibility"),
+        (r"^#\s*References\s*$", "## References"),
+    ]
+    for pattern, replacement in heading_replacements:
+        text = re.sub(pattern, replacement, text, flags=re.IGNORECASE | re.MULTILINE)
+
+    text = re.sub(r"\*\*Motivation\.?\*\*", "**Practice goal.**", text, flags=re.IGNORECASE)
+    text = text.replace(
+        "Clearly separate the problem description from the learning algorithms.",
+        "**Method.** I compare five machine learning algorithms using separate training, validation, and test sets.",
+    )
+    text = re.sub(
+        r"I implement \*\*5 algorithms\*\* \(one per group member\):\s*"
+        r"\| # \| Model \| Implemented by \|.*?"
+        r"\| 5 \| \*\*XGBoost\*\* \| \*\*[^\n]+\*\* \|",
+        """I compare five algorithms with complementary modeling assumptions:
+
+| Model | Practice focus |
+|---|---|
+| **Logistic Regression** | Interpretable linear probability baseline |
+| **Random Forest** | Nonlinear bagged tree ensemble |
+| **Linear SVM** | Margin-based linear classifier |
+| **Neural Network (MLP)** | Nonlinear multilayer classifier |
+| **XGBoost** | Gradient-boosted tree ensemble |""",
+        text,
+        flags=re.IGNORECASE | re.DOTALL,
+    )
+    text = text.replace("from other group members' model sections", "from the other model sections")
+    text = re.sub(r"my group.s model comparison", "the broader model comparison", text)
+
+    for pattern, replacement in [
+        (r"\bOur\b", "My"),
+        (r"\bour\b", "my"),
+        (r"\bWe\b", "I"),
+        (r"\bwe\b", "I"),
+        (r"\bus\b", "me"),
+    ]:
+        text = re.sub(pattern, replacement, text)
+
+    text = re.sub(r"\n{3,}", "\n\n", text).strip()
+    return text + "\n" if text else ""
+
+
 def rewrite_markdown(text: str, notebook_name: str, cell_index: int) -> str:
+    if notebook_name == NOTEBOOK_4:
+        return rewrite_mortgage_markdown(text)
+
     if (notebook_name, cell_index) in CELL_MARKDOWN_REPLACEMENTS:
         return CELL_MARKDOWN_REPLACEMENTS[(notebook_name, cell_index)].strip() + "\n"
 
@@ -529,6 +647,15 @@ def clean_metadata(notebook: dict) -> None:
 
 def clean_notebook(path: Path) -> int:
     notebook = json.loads(path.read_text(encoding="utf-8"))
+    if path.name == NOTEBOOK_4:
+        cells = notebook.get("cells", [])
+        for index, cell in enumerate(cells):
+            if cell.get("cell_type") != "markdown":
+                continue
+            if re.search(r"^#{1,3}\s*(?:1\.\s*)?Introduction\b", source_text(cell), re.IGNORECASE | re.MULTILINE):
+                notebook["cells"] = cells[index:]
+                break
+
     cleaned_cells = []
 
     for cell_index, cell in enumerate(notebook.get("cells", [])):
@@ -547,6 +674,8 @@ def clean_notebook(path: Path) -> int:
 
         if cell.get("cell_type") == "code":
             updated = update_data_paths(text)
+            if path.name == NOTEBOOK_4:
+                updated = clean_mortgage_code(updated)
             updated = clean_code_comments(updated)
             if updated != text:
                 set_source(cell, updated)

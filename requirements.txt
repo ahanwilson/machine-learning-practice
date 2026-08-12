@@ -4,4 +4,7 @@ matplotlib>=3.8
 scikit-learn>=1.4
 scipy>=1.11
 iisignature>=0.24
+seaborn>=0.13
+imbalanced-learn>=0.12
+xgboost>=2.0
 jupyter>=1.0

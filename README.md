@@ -2,7 +2,7 @@
 
 ## Overview
 
-This repository is a personal machine learning learning portfolio and practice journal. It collects three notebooks where I worked through tabular preprocessing, model tuning, time series forecasting, classification ensembles, dimensionality reduction, clustering, and simple regime analysis.
+This repository is a personal machine learning learning portfolio and practice journal. It collects four notebooks where I worked through tabular preprocessing, model tuning, time series forecasting, classification ensembles, dimensionality reduction, clustering, regime analysis, and serious mortgage delinquency prediction.
 
 This is not a production-grade machine learning system. The notebooks are meant to show what I practiced, what I tried, and what I observed while learning.
 
@@ -31,6 +31,8 @@ What I tried:
 - comparing hard voting, soft voting, and stacking ensembles
 - applying PCA, t-SNE, LLE, and k-Means
 - clustering macroeconomic regimes from inflation and unemployment data
+- comparing classification models for imbalanced mortgage loan outcomes
+- selecting classification thresholds with time-based validation data
 
 Observation:
 
@@ -43,6 +45,7 @@ The notebooks mix code experiments, outputs, and short interpretation notes. Som
 | `notebooks/01_tabular_housing_preprocessing_and_model_tuning.ipynb` | Practice tabular preprocessing and model tuning on housing data. | Missing-value imputation, categorical encoding, feature engineering, scaling, pipelines, linear regression, tree models, random forests, cross-validation, hyperparameter search, regularization, and learning curves. |
 | `notebooks/02_time_series_forecasting_and_ensemble_classification.ipynb` | Practice time series forecasting and classification ensembles. | NYSE volume forecasting, lagged features, time-series splits, baseline comparison, feature importance, path signatures, MNIST SVM classification, voting ensembles, and stacking. |
 | `notebooks/03_dimensionality_reduction_clustering_and_regimes.ipynb` | Practice dimensionality reduction, clustering, and regime analysis. | PCA with SVM and random forests, t-SNE, LLE, k-Means, silhouette analysis, clustering features for classification, and macroeconomic regime clustering. |
+| `notebooks/04_predicting_serious_delinquency_in_us_mortgage_loans.ipynb` | Practice predicting serious mortgage delinquency with imbalanced, time-indexed loan data. | Freddie Mac loan-level preprocessing, time-based train/validation/test splits, logistic regression, random forest, linear SVM, MLP, XGBoost, threshold selection, and model comparison. |
 
 ## Datasets Used
 
@@ -56,9 +59,14 @@ Downloaded public data:
 - The time series and ensemble notebook uses `sklearn.datasets.fetch_openml()` for MNIST.
 - The dimensionality reduction and clustering notebook uses `sklearn.datasets.fetch_openml()` for MNIST, `sklearn.datasets.fetch_olivetti_faces()` for the Olivetti faces dataset, and public FRED CSV URLs for the regime section.
 
+Data that must be obtained separately:
+
+- The mortgage delinquency notebook uses the Freddie Mac Single-Family Loan-Level Dataset. The raw sample files are not included in this repository. Access is subject to Freddie Mac's current terms and may require registration.
+- After obtaining the sample data, place the files under `data/freddie_mac/orig/` and `data/freddie_mac/svcg/`. The notebook expects `sample_orig_2018.txt` through `sample_orig_2022.txt` in `orig/`, and `sample_svcg_2018.txt` through `sample_svcg_2022.txt` in `svcg/`.
+
 Limitation:
 
-Some notebooks need internet access the first time they are run because these datasets are fetched from public sources.
+Some notebooks need internet access the first time they are run because datasets are fetched from public sources. The mortgage notebook cannot run from a fresh clone until the separately distributed Freddie Mac files are added in the directory layout above.
 
 ## Setup
 
@@ -88,7 +96,7 @@ Start Jupyter from the repository root:
 jupyter notebook
 ```
 
-Then open notebooks from the `notebooks/` directory.
+Then open notebooks from the `notebooks/` directory. Run them with `notebooks/` as the working directory so repository-relative paths such as `../data/NYSE.csv` and `../data/freddie_mac/` resolve as documented.
 
 Result:
 
@@ -101,6 +109,8 @@ Observation:
 - The notebooks keep prior outputs to show the learning process.
 - Results may vary slightly across library versions or hardware.
 - Several sections can take a while to run, especially grid search, randomized search, t-SNE, LLE, learning curves, MLP training, voting ensembles, and stacking.
+- The mortgage notebook includes five model families, resampling, hyperparameter tuning, and threshold evaluation. A complete run may be slow and memory intensive on a personal computer.
+- Mortgage model results depend on the exact Freddie Mac sample release and library versions. Existing outputs are retained as learning records and are not a claim of current production performance.
 - The notebooks are not packaged as reusable training pipelines or deployment code.
 
 Limitation:
@@ -116,6 +126,7 @@ Next step ideas:
 - add lightweight notebook smoke tests that avoid expensive model searches
 - add environment notes for fully reproducible long-running runs
 - revisit selected models with clearer train/validation/test reporting
+- test cost-sensitive and calibrated mortgage risk models while keeping threshold selection separate from the test set
 
 ## Maintenance Scripts
 
@@ -139,4 +150,5 @@ What the scripts check:
 - notebook markdown avoids course-specific wording
 - notebook metadata does not include local environment details
 - `NYSE.csv` references use `../data/NYSE.csv`
+- the mortgage notebook starts with the public project title, contains no group identity wording, and uses `../data/freddie_mac`
 - raw source notebooks are not left in the repository root
