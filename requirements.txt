@@ -7,4 +7,6 @@ iisignature>=0.24
 seaborn>=0.13
 imbalanced-learn>=0.12
 xgboost>=2.0
+tensorflow>=2.16
+keras-tuner>=1.4
 jupyter>=1.0

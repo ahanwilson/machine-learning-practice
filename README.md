@@ -2,7 +2,7 @@
 
 ## Overview
 
-This repository is a personal machine learning learning portfolio and practice journal. It collects four notebooks where I worked through tabular preprocessing, model tuning, time series forecasting, classification ensembles, dimensionality reduction, clustering, regime analysis, and serious mortgage delinquency prediction.
+This repository is a personal machine learning learning portfolio and practice journal. It collects five notebooks where I worked through tabular preprocessing, model tuning, time series forecasting, classification ensembles, dimensionality reduction, clustering, neural networks, recurrent models, regime analysis, and serious mortgage delinquency prediction.
 
 This is not a production-grade machine learning system. The notebooks are meant to show what I practiced, what I tried, and what I observed while learning.
 
@@ -33,6 +33,8 @@ What I tried:
 - clustering macroeconomic regimes from inflation and unemployment data
 - comparing classification models for imbalanced mortgage loan outcomes
 - selecting classification thresholds with time-based validation data
+- building regression and classification networks with TensorFlow/Keras
+- comparing random forests and recurrent networks for exchange-rate forecasting
 
 Observation:
 
@@ -45,7 +47,8 @@ The notebooks mix code experiments, outputs, and short interpretation notes. Som
 | `notebooks/01_tabular_housing_preprocessing_and_model_tuning.ipynb` | Practice tabular preprocessing and model tuning on housing data. | Missing-value imputation, categorical encoding, feature engineering, scaling, pipelines, linear regression, tree models, random forests, cross-validation, hyperparameter search, regularization, and learning curves. |
 | `notebooks/02_time_series_forecasting_and_ensemble_classification.ipynb` | Practice time series forecasting and classification ensembles. | NYSE volume forecasting, lagged features, time-series splits, baseline comparison, feature importance, path signatures, MNIST SVM classification, voting ensembles, and stacking. |
 | `notebooks/03_dimensionality_reduction_clustering_and_regimes.ipynb` | Practice dimensionality reduction, clustering, and regime analysis. | PCA with SVM and random forests, t-SNE, LLE, k-Means, silhouette analysis, clustering features for classification, and macroeconomic regime clustering. |
-| `notebooks/04_predicting_serious_delinquency_in_us_mortgage_loans.ipynb` | Practice predicting serious mortgage delinquency with imbalanced, time-indexed loan data. | Freddie Mac loan-level preprocessing, time-based train/validation/test splits, logistic regression, random forest, linear SVM, MLP, XGBoost, threshold selection, and model comparison. |
+| `notebooks/04_neural_networks_and_exchange_rate_forecasting.ipynb` | Practice neural-network modeling and next-day time series forecasting. | California housing regression MLPs, Keras Tuner, bank marketing DNN classification, exponential learning-rate scheduling, FRED exchange-rate windows, random forests, and a deep RNN. |
+| `notebooks/05_predicting_serious_delinquency_in_us_mortgage_loans.ipynb` | Practice predicting serious mortgage delinquency with imbalanced, time-indexed loan data. | Freddie Mac loan-level preprocessing, time-based train/validation/test splits, logistic regression, random forest, linear SVM, MLP, XGBoost, threshold selection, and model comparison. |
 
 ## Datasets Used
 
@@ -58,15 +61,17 @@ Downloaded public data:
 - The housing notebook downloads the California housing dataset from the public Hands-On Machine Learning companion data repository when it is not already cached locally.
 - The time series and ensemble notebook uses `sklearn.datasets.fetch_openml()` for MNIST.
 - The dimensionality reduction and clustering notebook uses `sklearn.datasets.fetch_openml()` for MNIST, `sklearn.datasets.fetch_olivetti_faces()` for the Olivetti faces dataset, and public FRED CSV URLs for the regime section.
+- The neural-network and exchange-rate notebook uses `sklearn.datasets.fetch_california_housing()` and the public FRED CSV endpoint for `DEXJPUS`.
 
 Data that must be obtained separately:
 
+- The neural-network and exchange-rate notebook requires the Portuguese Bank Marketing `bank_cleaned.csv` dataset. It is not included in this repository. Place an authorized copy at `data/bank_cleaned.csv` before running the bank classification section.
 - The mortgage delinquency notebook uses the Freddie Mac Single-Family Loan-Level Dataset. The raw sample files are not included in this repository. Access is subject to Freddie Mac's current terms and may require registration.
 - After obtaining the sample data, place the files under `data/freddie_mac/orig/` and `data/freddie_mac/svcg/`. The notebook expects `sample_orig_2018.txt` through `sample_orig_2022.txt` in `orig/`, and `sample_svcg_2018.txt` through `sample_svcg_2022.txt` in `svcg/`.
 
 Limitation:
 
-Some notebooks need internet access the first time they are run because datasets are fetched from public sources. The mortgage notebook cannot run from a fresh clone until the separately distributed Freddie Mac files are added in the directory layout above.
+Some notebooks need internet access the first time they are run because datasets are fetched from public sources. The neural-network notebook's bank classification section and the mortgage notebook cannot run from a fresh clone until their separately distributed data files are added in the directory layouts above.
 
 ## Setup
 
@@ -96,7 +101,7 @@ Start Jupyter from the repository root:
 jupyter notebook
 ```
 
-Then open notebooks from the `notebooks/` directory. Run them with `notebooks/` as the working directory so repository-relative paths such as `../data/NYSE.csv` and `../data/freddie_mac/` resolve as documented.
+Then open notebooks from the `notebooks/` directory. Run them with `notebooks/` as the working directory so repository-relative paths such as `../data/NYSE.csv`, `../data/bank_cleaned.csv`, and `../data/freddie_mac/` resolve as documented.
 
 Result:
 
@@ -110,6 +115,7 @@ Observation:
 - Results may vary slightly across library versions or hardware.
 - Several sections can take a while to run, especially grid search, randomized search, t-SNE, LLE, learning curves, MLP training, voting ensembles, and stacking.
 - The mortgage notebook includes five model families, resampling, hyperparameter tuning, and threshold evaluation. A complete run may be slow and memory intensive on a personal computer.
+- The neural-network notebook includes a 20-trial Keras Tuner search, multiple 30-epoch DNN runs, and a 100-epoch RNN. A complete run can take substantial time and benefits from a TensorFlow-compatible environment.
 - Mortgage model results depend on the exact Freddie Mac sample release and library versions. Existing outputs are retained as learning records and are not a claim of current production performance.
 - The notebooks are not packaged as reusable training pipelines or deployment code.
 
@@ -127,6 +133,7 @@ Next step ideas:
 - add environment notes for fully reproducible long-running runs
 - revisit selected models with clearer train/validation/test reporting
 - test cost-sensitive and calibrated mortgage risk models while keeping threshold selection separate from the test set
+- revisit the exchange-rate experiment with stronger time-series baselines and rolling validation
 
 ## Maintenance Scripts
 
@@ -150,5 +157,6 @@ What the scripts check:
 - notebook markdown avoids course-specific wording
 - notebook metadata does not include local environment details
 - `NYSE.csv` references use `../data/NYSE.csv`
+- the neural-network notebook uses `../data/bank_cleaned.csv` and contains no course or assignment framing
 - the mortgage notebook starts with the public project title, contains no group identity wording, and uses `../data/freddie_mac`
 - raw source notebooks are not left in the repository root

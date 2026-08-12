@@ -17,15 +17,18 @@ ROOT = Path(__file__).resolve().parents[1]
 NOTEBOOK_1 = "01_tabular_housing_preprocessing_and_model_tuning.ipynb"
 NOTEBOOK_2 = "02_time_series_forecasting_and_ensemble_classification.ipynb"
 NOTEBOOK_3 = "03_dimensionality_reduction_clustering_and_regimes.ipynb"
-NOTEBOOK_4 = "04_predicting_serious_delinquency_in_us_mortgage_loans.ipynb"
+NOTEBOOK_4 = "04_neural_networks_and_exchange_rate_forecasting.ipynb"
+NOTEBOOK_5 = "05_predicting_serious_delinquency_in_us_mortgage_loans.ipynb"
 
 NOTEBOOKS = [
     ROOT / "notebooks" / NOTEBOOK_1,
     ROOT / "notebooks" / NOTEBOOK_2,
     ROOT / "notebooks" / NOTEBOOK_3,
     ROOT / "notebooks" / NOTEBOOK_4,
+    ROOT / "notebooks" / NOTEBOOK_5,
 ]
 
+NEURAL_NETWORK_PROJECT_TITLE = "Neural Networks and Exchange Rate Forecasting"
 MORTGAGE_PROJECT_TITLE = (
     "Predicting Serious Delinquency in U.S. Mortgage Loans Using Machine Learning Models"
 )
@@ -246,6 +249,88 @@ The fine-tuned model is evaluated on the held-out test set to estimate performan
 
 Learning curves are generated with `sklearn.model_selection.learning_curve` using 5-fold cross-validation. The curves compare the linear regression baseline, the polynomial regression model, and the regularized regression model to diagnose underfitting or overfitting.
 """,
+    (NOTEBOOK_4, 1): """# Neural Networks and Exchange Rate Forecasting
+
+This notebook records three practice workflows: regression with a multilayer perceptron, binary classification with a deep neural network, and next-day exchange-rate forecasting with tree-based and recurrent models.
+
+## Regression MLP for California Housing
+
+**Practice goal.** Compare output-layer choices for a regression MLP and explore neural-network hyperparameters with Keras Tuner.
+
+The California housing dataset is loaded with `sklearn.datasets.fetch_california_housing()`. The data are divided into training, validation, and test sets using fixed random seeds so the comparisons can be repeated.
+""",
+    (NOTEBOOK_4, 3): """### Output Activation Comparison
+
+**Method.** Two regression MLPs use the same normalization layer, one hidden layer with 50 ReLU neurons, He initialization, the Nadam optimizer, and mean squared error loss. One model uses a ReLU output and the other uses a linear output. Both are trained for 30 epochs and compared with validation MSE.
+""",
+    (NOTEBOOK_4, 8): """### Evaluation and Interpretation
+
+For the model with a ReLU output layer, the validation MSE was **0.3576**. For the model without an output activation function, the validation MSE was **0.3763**. Since a lower MSE indicates better performance, the model with the ReLU output layer performed better in this experiment.
+
+Although a linear output layer is more common for regression, the California housing target is non-negative. ReLU therefore provides a reasonable alternative because it restricts predictions to non-negative values. Based on the observed validation MSE, I selected the ReLU output model for this comparison.
+""",
+    (NOTEBOOK_4, 9): """### Hyperparameter Tuning with Keras Tuner
+
+**Method.** A randomized search uses the first 5,000 training observations, 20 trials, and 20 epochs per trial. The objective is validation loss and the random seed is 42. The search space covers:
+
+- one to five hidden layers
+- one to 100 neurons per layer
+- learning rates from $10^{-4}$ to $10^{-2}$ with log sampling
+- $\\ell_2$ regularization from $10^{-4}$ to $100$ with log sampling
+- SGD with gradient clipping or Nadam
+
+The tuned network retains a linear output layer and reports the best hyperparameter configuration found by the search.
+""",
+    (NOTEBOOK_4, 17): """## Binary Classification DNN for Bank Marketing
+
+**Practice goal.** Build a deep neural network that predicts whether a Portuguese bank marketing contact results in a term-deposit subscription.
+
+The target is `response_binary`. The preprocessing workflow standardizes numerical features, one-hot encodes nominal categories, ordinal-encodes education, and represents day and month as cyclical features. The separately distributed bank-marketing dataset is loaded from `../data/bank_cleaned.csv`.
+""",
+    (NOTEBOOK_4, 20): """### Architecture and Evaluation Design
+
+**Method.** The classifier uses four hidden layers with 100 neurons each, He initialization, and Swish activation. A single sigmoid output represents the estimated success probability. Binary cross-entropy is used as the loss, and AUC is tracked because the target is binary and imbalanced. The training-set success proportion provides a simple class-balance check.
+""",
+    (NOTEBOOK_4, 24): """### Architecture Rationale and Observation
+
+The four-layer DNN treats `response_binary` as a binary outcome. Swish provides a smooth nonlinear activation, while He initialization is a practical choice for deep networks with ReLU-like activations. The sigmoid output maps predictions to probabilities, and binary cross-entropy matches the binary target.
+
+AUC complements the loss by measuring ranking performance across classification thresholds. The success proportion is calculated with `y_train.mean()` because the target is encoded as zero and one.
+""",
+    (NOTEBOOK_4, 25): """### Learning-Rate Scheduling and Overfitting Check
+
+**Method.** The DNN is trained for 30 epochs with Nesterov accelerated gradient, implemented as SGD with `momentum=0.9` and `nesterov=True`. An exponential schedule starts at `lr0=0.01` with `s=20`. Training and validation learning curves are compared for signs of overfitting after resetting the TensorFlow session.
+""",
+    (NOTEBOOK_4, 32): """### Learning Curve Interpretation
+
+The training loss continues to decrease, while the validation loss decreases initially and then rises slightly. This suggests mild overfitting in the later epochs. The recorded final validation loss is about **0.2115**, and validation AUC is about **0.9171**.
+
+The model performs reasonably well on the validation set, but the later separation between the curves indicates that additional regularization or earlier stopping could be useful in a future iteration.
+""",
+    (NOTEBOOK_4, 34): """## Exchange Rate Forecasting with Machine Learning
+
+**Practice goal.** Compare a random forest and a recurrent neural network for next-day forecasting of the Japan/U.S. foreign exchange rate (`DEXJPUS`).
+
+Daily observations from January 1990 through January 2023 are loaded from the public FRED CSV endpoint. This section requires internet access when the data are retrieved.
+""",
+    (NOTEBOOK_4, 36): """### Supervised Window Construction
+
+**Method.** Observations before 2010 form the training set, January 2010 through December 2015 forms the validation set, and later observations form the test set. Each supervised example uses the current exchange rate and the previous nine observations to predict the next day's value.
+""",
+    (NOTEBOOK_4, 40): """### Random Forest Forecasting Baseline
+
+**Evaluation.** A random forest regressor predicts the next-day exchange rate. Test performance is measured with mean squared error and directional accuracy. Directional accuracy compares the sign of the predicted one-day change with the sign of the observed change.
+""",
+    (NOTEBOOK_4, 44): """### Recurrent Neural Network Forecast
+
+**Method.** A deep RNN with two recurrent layers of 20 neurons and one dense output neuron is trained for 100 epochs with the Nadam optimizer. The validation learning curve is used to assess convergence and overfitting, while test MSE and directional accuracy are compared with the random forest baseline.
+""",
+    (NOTEBOOK_4, 52): """### RNN Result Interpretation
+
+The RNN converges quickly. Training and validation loss both fall sharply in the first few epochs and then remain stable, with no strong separation between the two curves.
+
+The recorded test MSE is about **0.5501**, and directional accuracy is about **0.4986**, which is close to 50%. In this experiment, the RNN does not predict the direction of the next exchange-rate movement better than chance, despite stable training and validation curves.
+""",
     (NOTEBOOK_2, 2): """## Feature Matrix and Target Construction
 
 This section builds the feature matrix `X` and the target variable `y` for the NYSE forecasting workflow. The first rows are displayed as a quick data-shape and feature sanity check.
@@ -386,6 +471,14 @@ def clean_mortgage_code(text: str) -> str:
     text = text.replace('Path("data")', 'Path("../data/freddie_mac")')
     text = text.replace("Path('processed_data')", "Path('../data/freddie_mac/processed')")
     text = text.replace('Path("processed_data")', 'Path("../data/freddie_mac/processed")')
+    return text
+
+
+def clean_neural_network_code(text: str) -> str:
+    """Use repository-relative paths while preserving the modeling workflow."""
+    text = text.replace('pd.read_csv("bank_cleaned.csv")', 'pd.read_csv("../data/bank_cleaned.csv")')
+    text = text.replace("pd.read_csv('bank_cleaned.csv')", "pd.read_csv('../data/bank_cleaned.csv')")
+    text = text.replace("../data/../data/bank_cleaned.csv", "../data/bank_cleaned.csv")
     return text
 
 
@@ -545,7 +638,7 @@ def rewrite_mortgage_markdown(text: str) -> str:
 
 
 def rewrite_markdown(text: str, notebook_name: str, cell_index: int) -> str:
-    if notebook_name == NOTEBOOK_4:
+    if notebook_name == NOTEBOOK_5:
         return rewrite_mortgage_markdown(text)
 
     if (notebook_name, cell_index) in CELL_MARKDOWN_REPLACEMENTS:
@@ -565,6 +658,10 @@ def rewrite_markdown(text: str, notebook_name: str, cell_index: int) -> str:
     text = text.replace("**Task:** Find", "This section evaluates")
     text = text.replace("**Task:** Using", "This section uses")
     text = text.replace("**Task:**", "**Practice focus:**")
+    text = text.replace(
+        "The separately distributed `bank_cleaned.csv` file",
+        "The separately distributed bank-marketing dataset",
+    )
     text = re.sub(r"Download the data as a csv file from .*? files\. ", "", text)
     text = text.replace(
         "If the data is stored in a file named `NYSE.csv` in the working directory, then loading the data can be done using the code below.",
@@ -656,7 +753,21 @@ def clean_metadata(notebook: dict) -> None:
 
 def clean_notebook(path: Path) -> int:
     notebook = json.loads(path.read_text(encoding="utf-8"))
+    neural_notebook_already_clean = False
     if path.name == NOTEBOOK_4:
+        first_markdown = next(
+            (
+                source_text(cell)
+                for cell in notebook.get("cells", [])
+                if cell.get("cell_type") == "markdown"
+            ),
+            "",
+        )
+        neural_notebook_already_clean = first_markdown.startswith(
+            f"# {NEURAL_NETWORK_PROJECT_TITLE}"
+        )
+
+    if path.name == NOTEBOOK_5:
         cells = notebook.get("cells", [])
         for index, cell in enumerate(cells):
             if cell.get("cell_type") != "markdown":
@@ -672,10 +783,12 @@ def clean_notebook(path: Path) -> int:
 
         if cell.get("cell_type") == "markdown":
             if HEADER_RE.search(text):
-                continue
+                if path.name != NOTEBOOK_4 or cell_index == 0:
+                    continue
             if path.name == NOTEBOOK_3 and OPTIONAL_NN_SECTION in text:
                 break
-            text = rewrite_markdown(text, path.name, cell_index)
+            rewrite_index = -1 if neural_notebook_already_clean else cell_index
+            text = rewrite_markdown(text, path.name, rewrite_index)
             if text:
                 set_source(cell, text)
                 cleaned_cells.append(cell)
@@ -684,6 +797,8 @@ def clean_notebook(path: Path) -> int:
         if cell.get("cell_type") == "code":
             updated = update_data_paths(text)
             if path.name == NOTEBOOK_4:
+                updated = clean_neural_network_code(updated)
+            if path.name == NOTEBOOK_5:
                 updated = clean_mortgage_code(updated)
             updated = clean_code_comments(updated)
             if updated != text:
