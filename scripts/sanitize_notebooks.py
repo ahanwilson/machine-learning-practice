@@ -17,12 +17,21 @@ ROOT = Path(__file__).resolve().parents[1]
 NOTEBOOK_1 = "01_tabular_housing_preprocessing_and_model_tuning.ipynb"
 NOTEBOOK_2 = "02_time_series_forecasting_and_ensemble_classification.ipynb"
 NOTEBOOK_3 = "03_dimensionality_reduction_clustering_and_regimes.ipynb"
+NOTEBOOK_4 = "04_neural_networks_and_exchange_rate_forecasting.ipynb"
+NOTEBOOK_5 = "05_predicting_serious_delinquency_in_us_mortgage_loans.ipynb"
 
 NOTEBOOKS = [
     ROOT / "notebooks" / NOTEBOOK_1,
     ROOT / "notebooks" / NOTEBOOK_2,
     ROOT / "notebooks" / NOTEBOOK_3,
+    ROOT / "notebooks" / NOTEBOOK_4,
+    ROOT / "notebooks" / NOTEBOOK_5,
 ]
+
+NEURAL_NETWORK_PROJECT_TITLE = "Neural Networks and Exchange Rate Forecasting"
+MORTGAGE_PROJECT_TITLE = (
+    "Predicting Serious Delinquency in U.S. Mortgage Loans Using Machine Learning Models"
+)
 
 COURSE_ID = "C" + "FRM 421/521"
 GRADING_PLATFORM = "Grade" + "scope"
@@ -240,6 +249,88 @@ The fine-tuned model is evaluated on the held-out test set to estimate performan
 
 Learning curves are generated with `sklearn.model_selection.learning_curve` using 5-fold cross-validation. The curves compare the linear regression baseline, the polynomial regression model, and the regularized regression model to diagnose underfitting or overfitting.
 """,
+    (NOTEBOOK_4, 1): """# Neural Networks and Exchange Rate Forecasting
+
+This notebook records three practice workflows: regression with a multilayer perceptron, binary classification with a deep neural network, and next-day exchange-rate forecasting with tree-based and recurrent models.
+
+## Regression MLP for California Housing
+
+**Practice goal.** Compare output-layer choices for a regression MLP and explore neural-network hyperparameters with Keras Tuner.
+
+The California housing dataset is loaded with `sklearn.datasets.fetch_california_housing()`. The data are divided into training, validation, and test sets using fixed random seeds so the comparisons can be repeated.
+""",
+    (NOTEBOOK_4, 3): """### Output Activation Comparison
+
+**Method.** Two regression MLPs use the same normalization layer, one hidden layer with 50 ReLU neurons, He initialization, the Nadam optimizer, and mean squared error loss. One model uses a ReLU output and the other uses a linear output. Both are trained for 30 epochs and compared with validation MSE.
+""",
+    (NOTEBOOK_4, 8): """### Evaluation and Interpretation
+
+For the model with a ReLU output layer, the validation MSE was **0.3576**. For the model without an output activation function, the validation MSE was **0.3763**. Since a lower MSE indicates better performance, the model with the ReLU output layer performed better in this experiment.
+
+Although a linear output layer is more common for regression, the California housing target is non-negative. ReLU therefore provides a reasonable alternative because it restricts predictions to non-negative values. Based on the observed validation MSE, I selected the ReLU output model for this comparison.
+""",
+    (NOTEBOOK_4, 9): """### Hyperparameter Tuning with Keras Tuner
+
+**Method.** A randomized search uses the first 5,000 training observations, 20 trials, and 20 epochs per trial. The objective is validation loss and the random seed is 42. The search space covers:
+
+- one to five hidden layers
+- one to 100 neurons per layer
+- learning rates from $10^{-4}$ to $10^{-2}$ with log sampling
+- $\\ell_2$ regularization from $10^{-4}$ to $100$ with log sampling
+- SGD with gradient clipping or Nadam
+
+The tuned network retains a linear output layer and reports the best hyperparameter configuration found by the search.
+""",
+    (NOTEBOOK_4, 17): """## Binary Classification DNN for Bank Marketing
+
+**Practice goal.** Build a deep neural network that predicts whether a Portuguese bank marketing contact results in a term-deposit subscription.
+
+The target is `response_binary`. The preprocessing workflow standardizes numerical features, one-hot encodes nominal categories, ordinal-encodes education, and represents day and month as cyclical features. The separately distributed bank-marketing dataset is loaded from `../data/bank_cleaned.csv`.
+""",
+    (NOTEBOOK_4, 20): """### Architecture and Evaluation Design
+
+**Method.** The classifier uses four hidden layers with 100 neurons each, He initialization, and Swish activation. A single sigmoid output represents the estimated success probability. Binary cross-entropy is used as the loss, and AUC is tracked because the target is binary and imbalanced. The training-set success proportion provides a simple class-balance check.
+""",
+    (NOTEBOOK_4, 24): """### Architecture Rationale and Observation
+
+The four-layer DNN treats `response_binary` as a binary outcome. Swish provides a smooth nonlinear activation, while He initialization is a practical choice for deep networks with ReLU-like activations. The sigmoid output maps predictions to probabilities, and binary cross-entropy matches the binary target.
+
+AUC complements the loss by measuring ranking performance across classification thresholds. The success proportion is calculated with `y_train.mean()` because the target is encoded as zero and one.
+""",
+    (NOTEBOOK_4, 25): """### Learning-Rate Scheduling and Overfitting Check
+
+**Method.** The DNN is trained for 30 epochs with Nesterov accelerated gradient, implemented as SGD with `momentum=0.9` and `nesterov=True`. An exponential schedule starts at `lr0=0.01` with `s=20`. Training and validation learning curves are compared for signs of overfitting after resetting the TensorFlow session.
+""",
+    (NOTEBOOK_4, 32): """### Learning Curve Interpretation
+
+The training loss continues to decrease, while the validation loss decreases initially and then rises slightly. This suggests mild overfitting in the later epochs. The recorded final validation loss is about **0.2115**, and validation AUC is about **0.9171**.
+
+The model performs reasonably well on the validation set, but the later separation between the curves indicates that additional regularization or earlier stopping could be useful in a future iteration.
+""",
+    (NOTEBOOK_4, 34): """## Exchange Rate Forecasting with Machine Learning
+
+**Practice goal.** Compare a random forest and a recurrent neural network for next-day forecasting of the Japan/U.S. foreign exchange rate (`DEXJPUS`).
+
+Daily observations from January 1990 through January 2023 are loaded from the public FRED CSV endpoint. This section requires internet access when the data are retrieved.
+""",
+    (NOTEBOOK_4, 36): """### Supervised Window Construction
+
+**Method.** Observations before 2010 form the training set, January 2010 through December 2015 forms the validation set, and later observations form the test set. Each supervised example uses the current exchange rate and the previous nine observations to predict the next day's value.
+""",
+    (NOTEBOOK_4, 40): """### Random Forest Forecasting Baseline
+
+**Evaluation.** A random forest regressor predicts the next-day exchange rate. Test performance is measured with mean squared error and directional accuracy. Directional accuracy compares the sign of the predicted one-day change with the sign of the observed change.
+""",
+    (NOTEBOOK_4, 44): """### Recurrent Neural Network Forecast
+
+**Method.** A deep RNN with two recurrent layers of 20 neurons and one dense output neuron is trained for 100 epochs with the Nadam optimizer. The validation learning curve is used to assess convergence and overfitting, while test MSE and directional accuracy are compared with the random forest baseline.
+""",
+    (NOTEBOOK_4, 52): """### RNN Result Interpretation
+
+The RNN converges quickly. Training and validation loss both fall sharply in the first few epochs and then remain stable, with no strong separation between the two curves.
+
+The recorded test MSE is about **0.5501**, and directional accuracy is about **0.4986**, which is close to 50%. In this experiment, the RNN does not predict the direction of the next exchange-rate movement better than chance, despite stable training and validation curves.
+""",
     (NOTEBOOK_2, 2): """## Feature Matrix and Target Construction
 
 This section builds the feature matrix `X` and the target variable `y` for the NYSE forecasting workflow. The first rows are displayed as a quick data-shape and feature sanity check.
@@ -372,6 +463,25 @@ def update_data_paths(text: str) -> str:
     return text
 
 
+def clean_mortgage_code(text: str) -> str:
+    """Keep model code intact while removing unused imports and fixing data paths."""
+    text = re.sub(r"^from pyexpat import features\s*\n?", "", text, flags=re.MULTILINE)
+    text = re.sub(r"^from werkzeug\.debug\.repr import missing\s*\n?", "", text, flags=re.MULTILINE)
+    text = text.replace("Path('data')", "Path('../data/freddie_mac')")
+    text = text.replace('Path("data")', 'Path("../data/freddie_mac")')
+    text = text.replace("Path('processed_data')", "Path('../data/freddie_mac/processed')")
+    text = text.replace('Path("processed_data")', 'Path("../data/freddie_mac/processed")')
+    return text
+
+
+def clean_neural_network_code(text: str) -> str:
+    """Use repository-relative paths while preserving the modeling workflow."""
+    text = text.replace('pd.read_csv("bank_cleaned.csv")', 'pd.read_csv("../data/bank_cleaned.csv")')
+    text = text.replace("pd.read_csv('bank_cleaned.csv')", "pd.read_csv('../data/bank_cleaned.csv')")
+    text = text.replace("../data/../data/bank_cleaned.csv", "../data/bank_cleaned.csv")
+    return text
+
+
 def clean_code_comments(text: str) -> str:
     text = text.replace(
         "# Based on (e) results, GridSearchCV performed better",
@@ -420,7 +530,117 @@ def clean_outputs(cell: dict) -> None:
         cell["outputs"] = cleaned_outputs
 
 
+def rewrite_mortgage_markdown(text: str) -> str:
+    """Reframe the mortgage report as a consistently styled personal project."""
+    text = text.replace("ˇs", "'s")
+    text = text.replace("#### Column layout reference (Freddie Mac SFLLD)", "#### Column Layout Reference")
+    text = text.replace("#### Load the raw files", "#### Raw File Loading")
+    text = text.replace(
+        "#### Construct the target (24-month serious delinquency)",
+        "#### Serious Delinquency Target Construction",
+    )
+    text = text.replace("#### Select features", "#### Feature Selection")
+    text = text.replace(
+        "#### Cleaning, encoding & time-based split",
+        "#### Cleaning, Encoding, and Time-Based Split",
+    )
+    text = text.replace("#### Baseline model", "#### Baseline Model")
+    text = text.replace("#### Handling class imbalance", "#### Handling Class Imbalance")
+    text = text.replace("#### Threshold selection", "#### Threshold Selection")
+    text = text.replace("#### Hyperparameter tuning", "#### Hyperparameter Tuning")
+    text = text.replace("#### Final model & test evaluation", "#### Final Model and Test Evaluation")
+    text = text.replace("#### Feature importance & interpretation", "#### Feature Importance and Interpretation")
+    text = text.replace("#### XGBoost — summary of results", "#### XGBoost Result Summary")
+    text = text.replace(
+        "The data used from Freddie Mac’s Single-Family Loan-Level Dataset (SFLLD).",
+        "The data are drawn from Freddie Mac’s Single-Family Loan-Level Dataset (SFLLD).",
+    )
+    text = text.replace(
+        "The data used from Freddie Mac's Single-Family Loan-Level Dataset (SFLLD).",
+        "The data are drawn from Freddie Mac's Single-Family Loan-Level Dataset (SFLLD).",
+    )
+    text = text.replace("This study has several limitations.", "This project has several limitations.")
+    text = re.sub(
+        r"^\s*\*\*Implemented by:\*\*[^\n]*(?:\n|$)",
+        "",
+        text,
+        flags=re.IGNORECASE | re.MULTILINE,
+    )
+
+    heading_replacements = [
+        (r"^#\s*1\.\s*Introduction\s*$", f"# {MORTGAGE_PROJECT_TITLE}\n\n## Introduction"),
+        (r"^##\s*1\.1\s*Problem Statement\s*$", "### Problem Statement"),
+        (r"^##\s*1\.2\s*Related Literature\s*$", "### Related Literature"),
+        (r"^##\s*1\.3\s*Contribution\s*$", "### Project Contribution"),
+        (r"^#\s*2\.\s*Data Description\s*$", "## Data Description"),
+        (r"^##\s*2\.1\s*Data Source\s*$", "### Data Source"),
+        (r"^##\s*2\.2\s*Data Structure\s*$", "### Data Structure"),
+        (r"^##\s*2\.3\s*Target Variable\s*$", "### Target Variable"),
+        (r"^##\s*2\.4\s*Features\s*$", "### Features"),
+        (r"^##\s*2\.5\s*Data Cleaning and Preprocessing\s*$", "### Data Cleaning and Preprocessing"),
+        (r"^###\s*2\.2a\s*Column layout reference \(Freddie Mac SFLLD\)\s*$", "#### Column Layout Reference"),
+        (r"^###\s*2\.2b\s*Load the raw files\s*$", "#### Raw File Loading"),
+        (r"^###\s*2\.3a\s*Construct the target \(24-month serious delinquency\)\s*$", "#### Serious Delinquency Target Construction"),
+        (r"^###\s*2\.4a\s*Select features\s*$", "#### Feature Selection"),
+        (r"^###\s*2\.5a\s*Cleaning, encoding & time-based split\s*$", "#### Cleaning, Encoding, and Time-Based Split"),
+        (r"^#\s*3\.\s*Exploratory Data Analysis\s*$", "## Exploratory Data Analysis"),
+        (r"^#\s*4\.\s*Methodology\s*$", "## Methodology"),
+        (r"^##\s*4\.1\s*Overview of Models\s*$", "### Model Overview"),
+        (r"^##\s*4\.\d\s*Model [0-9]+\s*:\s*", "### "),
+        (r"^#{3,4}\s*4\.\d\.\d\s*", "#### "),
+        (r"^#\s*5\.\s*Results\s*$", "## Results"),
+        (r"^##\s*5\.1\s*", "### "),
+        (r"^##\s*5\.2\s*", "### "),
+        (r"^##\s*5\.3\s*", "### "),
+        (r"^###\s*5\.3\.\d\s*", "#### "),
+        (r"^#\s*6\.\s*Discussions and Conclusions\s*$", "## Discussion and Conclusions"),
+        (r"^#\s*Appendix\.\s*Reproducibility\s*$", "## Reproducibility"),
+        (r"^#\s*References\s*$", "## References"),
+    ]
+    for pattern, replacement in heading_replacements:
+        text = re.sub(pattern, replacement, text, flags=re.IGNORECASE | re.MULTILINE)
+
+    text = re.sub(r"\*\*Motivation\.?\*\*", "**Practice goal.**", text, flags=re.IGNORECASE)
+    text = text.replace(
+        "Clearly separate the problem description from the learning algorithms.",
+        "**Method.** I compare five machine learning algorithms using separate training, validation, and test sets.",
+    )
+    text = re.sub(
+        r"I implement \*\*5 algorithms\*\* \(one per group member\):\s*"
+        r"\| # \| Model \| Implemented by \|.*?"
+        r"\| 5 \| \*\*XGBoost\*\* \| \*\*[^\n]+\*\* \|",
+        """I compare five algorithms with complementary modeling assumptions:
+
+| Model | Practice focus |
+|---|---|
+| **Logistic Regression** | Interpretable linear probability baseline |
+| **Random Forest** | Nonlinear bagged tree ensemble |
+| **Linear SVM** | Margin-based linear classifier |
+| **Neural Network (MLP)** | Nonlinear multilayer classifier |
+| **XGBoost** | Gradient-boosted tree ensemble |""",
+        text,
+        flags=re.IGNORECASE | re.DOTALL,
+    )
+    text = text.replace("from other group members' model sections", "from the other model sections")
+    text = re.sub(r"my group.s model comparison", "the broader model comparison", text)
+
+    for pattern, replacement in [
+        (r"\bOur\b", "My"),
+        (r"\bour\b", "my"),
+        (r"\bWe\b", "I"),
+        (r"\bwe\b", "I"),
+        (r"\bus\b", "me"),
+    ]:
+        text = re.sub(pattern, replacement, text)
+
+    text = re.sub(r"\n{3,}", "\n\n", text).strip()
+    return text + "\n" if text else ""
+
+
 def rewrite_markdown(text: str, notebook_name: str, cell_index: int) -> str:
+    if notebook_name == NOTEBOOK_5:
+        return rewrite_mortgage_markdown(text)
+
     if (notebook_name, cell_index) in CELL_MARKDOWN_REPLACEMENTS:
         return CELL_MARKDOWN_REPLACEMENTS[(notebook_name, cell_index)].strip() + "\n"
 
@@ -438,6 +658,10 @@ def rewrite_markdown(text: str, notebook_name: str, cell_index: int) -> str:
     text = text.replace("**Task:** Find", "This section evaluates")
     text = text.replace("**Task:** Using", "This section uses")
     text = text.replace("**Task:**", "**Practice focus:**")
+    text = text.replace(
+        "The separately distributed `bank_cleaned.csv` file",
+        "The separately distributed bank-marketing dataset",
+    )
     text = re.sub(r"Download the data as a csv file from .*? files\. ", "", text)
     text = text.replace(
         "If the data is stored in a file named `NYSE.csv` in the working directory, then loading the data can be done using the code below.",
@@ -529,6 +753,29 @@ def clean_metadata(notebook: dict) -> None:
 
 def clean_notebook(path: Path) -> int:
     notebook = json.loads(path.read_text(encoding="utf-8"))
+    neural_notebook_already_clean = False
+    if path.name == NOTEBOOK_4:
+        first_markdown = next(
+            (
+                source_text(cell)
+                for cell in notebook.get("cells", [])
+                if cell.get("cell_type") == "markdown"
+            ),
+            "",
+        )
+        neural_notebook_already_clean = first_markdown.startswith(
+            f"# {NEURAL_NETWORK_PROJECT_TITLE}"
+        )
+
+    if path.name == NOTEBOOK_5:
+        cells = notebook.get("cells", [])
+        for index, cell in enumerate(cells):
+            if cell.get("cell_type") != "markdown":
+                continue
+            if re.search(r"^#{1,3}\s*(?:1\.\s*)?Introduction\b", source_text(cell), re.IGNORECASE | re.MULTILINE):
+                notebook["cells"] = cells[index:]
+                break
+
     cleaned_cells = []
 
     for cell_index, cell in enumerate(notebook.get("cells", [])):
@@ -536,10 +783,12 @@ def clean_notebook(path: Path) -> int:
 
         if cell.get("cell_type") == "markdown":
             if HEADER_RE.search(text):
-                continue
+                if path.name != NOTEBOOK_4 or cell_index == 0:
+                    continue
             if path.name == NOTEBOOK_3 and OPTIONAL_NN_SECTION in text:
                 break
-            text = rewrite_markdown(text, path.name, cell_index)
+            rewrite_index = -1 if neural_notebook_already_clean else cell_index
+            text = rewrite_markdown(text, path.name, rewrite_index)
             if text:
                 set_source(cell, text)
                 cleaned_cells.append(cell)
@@ -547,6 +796,10 @@ def clean_notebook(path: Path) -> int:
 
         if cell.get("cell_type") == "code":
             updated = update_data_paths(text)
+            if path.name == NOTEBOOK_4:
+                updated = clean_neural_network_code(updated)
+            if path.name == NOTEBOOK_5:
+                updated = clean_mortgage_code(updated)
             updated = clean_code_comments(updated)
             if updated != text:
                 set_source(cell, updated)
