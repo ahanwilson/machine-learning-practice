@@ -458,6 +458,15 @@ def rewrite_mortgage_markdown(text: str) -> str:
     text = text.replace("#### Final model & test evaluation", "#### Final Model and Test Evaluation")
     text = text.replace("#### Feature importance & interpretation", "#### Feature Importance and Interpretation")
     text = text.replace("#### XGBoost — summary of results", "#### XGBoost Result Summary")
+    text = text.replace(
+        "The data used from Freddie Mac’s Single-Family Loan-Level Dataset (SFLLD).",
+        "The data are drawn from Freddie Mac’s Single-Family Loan-Level Dataset (SFLLD).",
+    )
+    text = text.replace(
+        "The data used from Freddie Mac's Single-Family Loan-Level Dataset (SFLLD).",
+        "The data are drawn from Freddie Mac's Single-Family Loan-Level Dataset (SFLLD).",
+    )
+    text = text.replace("This study has several limitations.", "This project has several limitations.")
     text = re.sub(
         r"^\s*\*\*Implemented by:\*\*[^\n]*(?:\n|$)",
         "",
