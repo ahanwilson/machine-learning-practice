@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import csv
 import json
 import re
 import sys
@@ -13,11 +14,18 @@ ROOT = Path(__file__).resolve().parents[1]
 NOTEBOOK_1 = "01_tabular_housing_preprocessing_and_model_tuning.ipynb"
 NOTEBOOK_2 = "02_time_series_forecasting_and_ensemble_classification.ipynb"
 NOTEBOOK_3 = "03_dimensionality_reduction_clustering_and_regimes.ipynb"
+NOTEBOOK_4 = "04_neural_networks_and_exchange_rate_forecasting.ipynb"
+NOTEBOOK_5 = "05_predicting_serious_delinquency_in_us_mortgage_loans.ipynb"
+NEURAL_NETWORK_PROJECT_TITLE = "Neural Networks and Exchange Rate Forecasting"
+MORTGAGE_PROJECT_TITLE = (
+    "Predicting Serious Delinquency in U.S. Mortgage Loans Using Machine Learning Models"
+)
 
 OLD_NOTEBOOK_NAMES = [
     "01_housing" + "_preprocessing.ipynb",
     "02_time_series" + "_random_forest_svm.ipynb",
     "03_pca" + "_clustering.ipynb",
+    "04_predicting_serious_delinquency" + "_in_us_mortgage_loans.ipynb",
 ]
 
 REQUIRED_PATHS = [
@@ -27,7 +35,10 @@ REQUIRED_PATHS = [
     ROOT / "notebooks" / NOTEBOOK_1,
     ROOT / "notebooks" / NOTEBOOK_2,
     ROOT / "notebooks" / NOTEBOOK_3,
+    ROOT / "notebooks" / NOTEBOOK_4,
+    ROOT / "notebooks" / NOTEBOOK_5,
     ROOT / "data" / "NYSE.csv",
+    ROOT / "data" / "bank_cleaned.csv",
     ROOT / "scripts" / "sanitize_notebooks.py",
     ROOT / "scripts" / "validate_repo.py",
 ]
@@ -49,7 +60,7 @@ CREATE_FEATURE_PHRASE = "Create the " + "feature matrix"
 SAME_SPLIT_PHRASE = "Using the same " + "split as in"
 
 RAW_SOURCE_NOTEBOOKS = [
-    ROOT / f"{SOURCE_NOTEBOOK_TITLE}{index}.ipynb" for index in (1, 2, 3)
+    ROOT / f"{SOURCE_NOTEBOOK_TITLE}{index}.ipynb" for index in (1, 2, 3, 4)
 ]
 
 FORBIDDEN_MARKDOWN = [
@@ -77,6 +88,14 @@ ABSOLUTE_LOCAL_PATH_RE = re.compile(
 )
 BAD_NYSE_RE = re.compile(r"(?<!\.\./data/)NYSE\.csv")
 EMAIL_RE = re.compile(r"[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}", re.IGNORECASE)
+MORTGAGE_IDENTITY_RE = re.compile(
+    r"\b(?:CFRM\s*(?:421/521|521/421)|Group Members?|Implemented by)\b",
+    re.IGNORECASE,
+)
+COLLECTIVE_AUTHOR_RE = re.compile(r"\b(?:we|our|ours)\b", re.IGNORECASE)
+MORTGAGE_DATA_PATH_RE = re.compile(r"Path\(\s*['\"]\.\./data/freddie_mac['\"]\s*\)")
+BANK_DATA_PATH_RE = re.compile(r"\.\./data/bank_cleaned\.csv")
+BAD_BANK_DATA_PATH_RE = re.compile(r"(?<!\.\./data/)bank_cleaned\.csv")
 SECRET_RE = re.compile(
     r"(?:api[_-]?key|password|secret|token)\s*[:=]\s*['\"][^'\"]+['\"]",
     re.IGNORECASE,
@@ -97,7 +116,6 @@ PROMPT_TONE_RE = re.compile(
     + re.escape(CREATE_FEATURE_PHRASE)
     + r"|"
     + re.escape(SAME_SPLIT_PHRASE),
-    re.IGNORECASE,
 )
 
 
@@ -146,6 +164,42 @@ def validate_notebook(path: Path) -> list[str]:
     errors: list[str] = []
     notebook = json.loads(path.read_text(encoding="utf-8"))
 
+    if path.name == NOTEBOOK_4:
+        cells = notebook.get("cells", [])
+        first_markdown = next(
+            (source_text(cell) for cell in cells if cell.get("cell_type") == "markdown"),
+            "",
+        )
+        if not first_markdown.startswith(f"# {NEURAL_NETWORK_PROJECT_TITLE}"):
+            errors.append(f"{path.relative_to(ROOT)}: must begin with the neural-network project title")
+
+        code_text = "\n".join(
+            source_text(cell) for cell in cells if cell.get("cell_type") == "code"
+        )
+        if not BANK_DATA_PATH_RE.search(code_text):
+            errors.append(
+                f"{path.relative_to(ROOT)}: bank data path must use ../data/bank_cleaned.csv"
+            )
+
+    if path.name == NOTEBOOK_5:
+        cells = notebook.get("cells", [])
+        first_markdown = next(
+            (source_text(cell) for cell in cells if cell.get("cell_type") == "markdown"),
+            "",
+        )
+        if not first_markdown.startswith(f"# {MORTGAGE_PROJECT_TITLE}\n\n## Introduction"):
+            errors.append(
+                f"{path.relative_to(ROOT)}: must begin with the project title and Introduction"
+            )
+
+        code_text = "\n".join(
+            source_text(cell) for cell in cells if cell.get("cell_type") == "code"
+        )
+        if not MORTGAGE_DATA_PATH_RE.search(code_text):
+            errors.append(
+                f"{path.relative_to(ROOT)}: Freddie Mac data path must use ../data/freddie_mac"
+            )
+
     for meta_location, meta_text in iter_text_fields(notebook.get("metadata", {}), f"{path.relative_to(ROOT)} metadata"):
         if ABSOLUTE_LOCAL_PATH_RE.search(meta_text) or ".venv" in meta_text:
             errors.append(f"{meta_location}: contains environment-specific metadata")
@@ -169,6 +223,12 @@ def validate_notebook(path: Path) -> list[str]:
         if PROMPT_TONE_RE.search(text):
             errors.append(f"{location}: source contains prompt-style wording")
 
+        if path.name == NOTEBOOK_5 and cell.get("cell_type") == "markdown":
+            if MORTGAGE_IDENTITY_RE.search(text):
+                errors.append(f"{location}: contains course, group, or author identity wording")
+            if COLLECTIVE_AUTHOR_RE.search(text):
+                errors.append(f"{location}: contains collective authorship wording")
+
         if UNSAFE_TAR_EXTRACT_RE.search(text) and "safe_extract_tar" not in text:
             errors.append(f"{location}: contains tarfile.extractall without the safe extraction helper")
 
@@ -179,6 +239,11 @@ def validate_notebook(path: Path) -> list[str]:
         for field_location, field_text in iter_text_fields(cell, location):
             if OPTIONAL_NN_SECTION in field_text:
                 errors.append(f"{field_location}: contains optional neural network section")
+
+            if path.name == NOTEBOOK_5 and MORTGAGE_IDENTITY_RE.search(field_text):
+                errors.append(
+                    f"{field_location}: contains course, group, or author identity wording"
+                )
 
             if "Kernel crashed" in field_text or "vscodeJupyterKernelCrash" in field_text:
                 errors.append(f"{field_location}: contains a notebook kernel crash artifact")
@@ -195,6 +260,11 @@ def validate_notebook(path: Path) -> list[str]:
             for match in BAD_NYSE_RE.finditer(field_text):
                 context = field_text[max(0, match.start() - 20) : match.end() + 20]
                 errors.append(f"{field_location}: NYSE.csv reference is not ../data/NYSE.csv ({context!r})")
+
+            if path.name == NOTEBOOK_4 and BAD_BANK_DATA_PATH_RE.search(field_text):
+                errors.append(
+                    f"{field_location}: bank_cleaned.csv reference is not ../data/bank_cleaned.csv"
+                )
 
     return errors
 
@@ -214,6 +284,23 @@ def main() -> int:
         old_path = ROOT / "notebooks" / old_name
         if old_path.exists():
             errors.append(f"Old notebook filename should not remain: {old_path.relative_to(ROOT)}")
+
+    gitignore_path = ROOT / ".gitignore"
+    if gitignore_path.exists():
+        ignored_entries = {
+            line.strip()
+            for line in gitignore_path.read_text(encoding="utf-8").splitlines()
+            if line.strip() and not line.lstrip().startswith("#")
+        }
+        if "data/bank_cleaned.csv" in ignored_entries:
+            errors.append(".gitignore: data/bank_cleaned.csv must not be ignored")
+
+    bank_data_path = ROOT / "data" / "bank_cleaned.csv"
+    if bank_data_path.exists():
+        with bank_data_path.open(encoding="utf-8-sig", newline="") as bank_file:
+            header = next(csv.reader(bank_file), [])
+        if "response_binary" not in header:
+            errors.append("data/bank_cleaned.csv: missing required response_binary column")
 
     for path in [
         ROOT / "README.md",
@@ -236,7 +323,10 @@ def main() -> int:
         return 1
 
     print("Validation passed.")
-    print("Checked required files, notebook cleanup, local paths, optional section, and NYSE.csv references.")
+    print(
+        "Checked required files, notebook cleanup, local paths, optional section, "
+        "and repository-relative data references."
+    )
     return 0
 
 
